@@ -1,23 +1,37 @@
 {
-  "name": "neo3",
-  "private": true,
-  "version": "0.0.0",
+  "name": "neo3-chat",
+  "version": "1.0.0",
+  "description": "A modern chat application built with Lit",
+  "main": "index.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "compile-css": "sass app.scss app.css"
+  },
+  "keywords": [
+    "chat",
+    "ai",
+    "ollama",
+    "lit"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "sass-embedded": "^1.89.0",
+    "vite": "^6.0.3"
   },
   "dependencies": {
+    "@speed-highlight/core": "^1.2.7",
     "highlight.js": "^11.11.1",
-    "lit": "^3.3.0",
+    "i": "^0.3.7",
+    "lit": "^3.2.1",
+    "lit-css-loader": "^3.0.1",
     "ollama": "^0.5.15",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
+    "sass": "^1.89.0",
     "unified": "^11.0.5"
-  },
-  "devDependencies": {
-    "sass-embedded": "^1.89.0",
-    "vite": "^6.3.5"
   }
 }
