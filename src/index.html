@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neo3 Chat - AI Chat Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            background: #171717;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, Inter, ui-sans-serif,
+                system-ui, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+        }
+
+        /* Loading spinner */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #333;
+            border-top: 4px solid #007acc;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* Hide loading when chat-page is defined */
+        chat-page:defined~.loading {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <chat-page></chat-page>
+
+    <div class="loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading Neo3 Chat...</div>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+</body>
+
+</html>
