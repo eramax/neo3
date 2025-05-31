@@ -61,8 +61,8 @@ export class ChatPage extends LitElement {
         this.loadChats();
     }
 
-    async loadChats() {
-        this.chats = await this.app.getChats() || [];
+    loadChats() {
+        this.chats = this.app.getChats();
     }
 
     connectedCallback() {
@@ -78,7 +78,7 @@ export class ChatPage extends LitElement {
         window.addEventListener('popstate', updateFromUrl);
         window.addEventListener("chatTitleUpdated", (e) => {
             const { chatId, newTitle } = e.detail;
-            this.loadChats(); // Use loadChats to ensure proper array handling
+            this.loadChats();
             if (chatId === this.currentChatId) {
                 this.selectedChat = newTitle;
                 this.currentChat = this.app.getChat(chatId);
@@ -101,9 +101,9 @@ export class ChatPage extends LitElement {
         this.modelsLoading = false;
     }
 
-    async updateCurrentChat(chatId) {
-        const currentChat = await this.app.getChat(chatId);
-        const currentMessages = await this.app.getMessages(chatId);
+    updateCurrentChat(chatId) {
+        const currentChat = this.app.getChat(chatId);
+        const currentMessages = this.app.getMessages(chatId);
 
         Object.assign(this, {
             currentChatId: chatId,
@@ -113,7 +113,7 @@ export class ChatPage extends LitElement {
             selectedChat: currentChat?.title || "New Chat"
         });
 
-        this.chats = await this.app.getChats() || [];
+        this.chats = this.app.getChats();
         setTimeout(() => this.scrollToBottom(), 10);
     }
 
@@ -127,8 +127,8 @@ export class ChatPage extends LitElement {
     }
 
     async createNewChat() {
-        const id = await this.app.createChat();
-        this.chats = await this.app.getChats() || [];
+        const id = this.app.createChat();
+        this.chats = this.app.getChats();
         this.navigateToChat(id);
     }
 
@@ -151,7 +151,7 @@ export class ChatPage extends LitElement {
             metadata: { model: this.selectedModel }
         };
 
-        this.currentMessages = await this.app.addMessageWithTitleGeneration(
+        this.currentMessages = this.app.addMessageWithTitleGeneration(
             this.currentChatId,
             userMsg,
             this.selectedModel
@@ -174,7 +174,7 @@ export class ChatPage extends LitElement {
                     time: new Date().toLocaleTimeString(),
                     metadata: { model: this.selectedModel }
                 };
-                this.currentMessages = await this.app.addMessage(this.currentChatId, aiMsg);
+                this.currentMessages = this.app.addMessage(this.currentChatId, aiMsg);
                 this.streamingMessage = "";
                 this.isStreaming = false;
                 this.scrollToBottom();
@@ -189,12 +189,13 @@ export class ChatPage extends LitElement {
 
     async abortStream() {
         if (this.isStreaming) {
-            await this.app.abort(this.currentChatId);
-            this.currentMessages = await this.app.getMessages(this.currentChatId);
+            const updatedMessages = await this.app.abort(this.currentChatId);
+            if (updatedMessages) {
+                this.currentMessages = updatedMessages;
+            }
             this.streamingMessage = "";
             this.isStreaming = false;
-            // Ensure chats is refreshed and is an array
-            this.chats = await this.app.getChats() || [];
+            this.chats = this.app.getChats();
         }
     }
 

@@ -28,6 +28,7 @@
     "i": "^0.3.7",
     "lit": "^3.2.1",
     "lit-css-loader": "^3.0.1",
+    "marked": "^15.0.12",
     "ollama": "^0.5.15",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
