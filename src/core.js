@@ -188,7 +188,7 @@ export class ChatApp {
         return [...this.messages[chatId]];
     }
 
-    async addMessageWithTitleGeneration(chatId, message, model) {
+    addMessageWithTitleGeneration(chatId, message, model) {
         if (!this.messages[chatId]) this.messages[chatId] = [];
         const isFirstUserMessage = this.messages[chatId].length === 0 && message.role === 'user';
 

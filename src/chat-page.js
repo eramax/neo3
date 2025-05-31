@@ -167,7 +167,7 @@ export class ChatPage extends LitElement {
                 this.streamingMessage = chunk;
                 this.scrollToBottom();
             },
-            async (final) => {
+            (final) => {
                 const aiMsg = {
                     role: "ai",
                     content: final,
@@ -296,7 +296,7 @@ export class ChatPage extends LitElement {
                                 <h2>Start a new conversation</h2>
                                 <p>Ask me anything, and I'll help you with coding, explanations, or general questions.</p>
                             </div></div>` :
-                this.currentMessages.length === 0 ?
+                !Array.isArray(this.currentMessages) || this.currentMessages.length === 0 ?
                     html`<div class="empty-state"><div class="empty-content">
                                     <p>No messages in this chat yet.</p>
                                 </div></div>` :
