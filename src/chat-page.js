@@ -387,24 +387,28 @@ export class ChatPage extends LitElement {
                     html`<div class="empty-state"><div class="empty-content">
                         <p>No messages in this chat yet.</p>
                     </div></div>` :
-                    html`${this.currentMessages.map(msg => html`
+                    html`${this.currentMessages.map(msg => {
+                        // Create a temporary MDRenderer instance to use its text direction detection
+                        const renderer = document.createElement('markdown-block');
+                        const direction = renderer.detectTextDirection(msg.content);
+                        return html`
                         <div class="message ${msg.role === 'ai' ? 'ai-message' : 'user-message'}">
                         <div class="avatar">${msg.role === "ai" ? "🤖" : "👤"}</div>
-                        <div class="message-content">
+                        <div class="message-content" >
                             <div class="message-header">
                             <span class="sender">${msg.role === "ai" ? msg.metadata?.model || "AI" : "User"}</span>
                             <span class="time">${msg.time}</span>
                             </div>
-                            <div class="content">
+                            <div class="content" dir="${direction}">
                             ${!msg.content
-                            ? html`<div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`
-                            : html`<markdown-block .content=${msg.content}></markdown-x>`
-                        }
+                                ? html`<div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`
+                                : html`<markdown-block .content=${msg.content}></markdown-block>`
+                            }
                             </div>
                         </div>
                         </div>
-                    `)}
-                `}
+                    `})}`
+            }
                 </div>
                 <div class="input-area">
                 <div class="input-container">

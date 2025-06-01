@@ -13,6 +13,33 @@ export class MDRenderer extends HTMLElement {
         this.lexer = new MDTokenizer();
     }
 
+    detectTextDirection(text) {
+        if (!text || text.trim().length === 0) return 'ltr';
+
+        // Remove code blocks and inline code first
+        let cleanText = text
+            .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+            .replace(/`[^`]*`/g, ''); // Remove inline code
+
+        // Count Arabic characters in the actual text
+        const arabicPattern = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g;
+        const arabicMatches = cleanText.match(arabicPattern) || [];
+
+        // Count Latin characters (A-Z, a-z)
+        const latinPattern = /[A-Za-z]/g;
+        const latinMatches = cleanText.match(latinPattern) || [];
+
+        const arabicCount = arabicMatches.length;
+        const latinCount = latinMatches.length;
+        const totalLetters = arabicCount + latinCount;
+
+        // Need significant text to make a determination
+        if (totalLetters < 5) return 'ltr';
+
+        // If Arabic characters make up more than 50% of all letters, use RTL
+        return (arabicCount / totalLetters) > 0.5 ? 'rtl' : 'ltr';
+    }
+
     connectedCallback() {
         if (!this._container.parentNode) {
             this.appendChild(this._container);
@@ -29,7 +56,10 @@ export class MDRenderer extends HTMLElement {
 
     set content(value) {
         if (this._internalContent === value) return;
-        this._internalContent = value
+        this._internalContent = value;
+        // Apply direction to container based on content
+        const direction = this.detectTextDirection(value);
+        this._container.setAttribute('dir', direction);
         this._updateRenderedContent();
     }
 
