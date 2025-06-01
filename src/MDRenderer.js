@@ -211,7 +211,7 @@ export class MDRenderer extends HTMLElement {
                 el.open = false; // closed by default to show thinking state
                 const summary = document.createElement('summary');
                 summary.classList.add('thinking-summary'); // Added class
-                summary.textContent = 'Thinking...';
+                summary.textContent = 'Thinking Process';
                 el.appendChild(summary);
                 // Wrap text content in a paragraph or div for better styling control if needed
                 // For now, direct text node as per original logic

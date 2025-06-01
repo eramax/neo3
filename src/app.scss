@@ -891,7 +891,7 @@ body {
 
 // Styles for <details> and <summary> used for "thinking" blocks
 .content details.thinking-details {
-  background-color: $bg-secondary;
+  background-color: $bg-code;
   border: 1px solid $border;
   border-radius: $radius;
   margin: 16px 0;
@@ -901,12 +901,13 @@ body {
   summary.thinking-summary {
     cursor: pointer;
     font-weight: 500;
-    color: $accent;
+    font-style: italic;
+    color: #95a6b2;
     margin-bottom: 8px;
     outline: none;
 
     &:hover {
-      color: $accent-hover;
+      font-style: normal;
     }
   }
   // Basic styling for the content within details, if needed
