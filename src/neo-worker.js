@@ -1,65 +1,53 @@
 import { Ollama } from "ollama/browser";
 
 let ollama = null;
-let abortController = null;
 
 // Initialize Ollama instance
 function initOllama(host) {
     ollama = new Ollama({ host });
 }
 
+// Create chat response
+async function askAI(model, messages, think = false, stream = true) {
+    return await ollama.chat({
+        model,
+        messages,
+        stream,
+        //think
+    });
+}
+
 // Streaming implementation
-async function streamChatInternal(model, messagesArray, requestId, onChunk, onComplete, onError) {
-    let content = '';
+async function streamChat(requestId, { model, messages, think = true }) {
     try {
-        const response = await ollama.chat({
-            model,
-            messages: messagesArray.map(m => ({ role: m.role, content: m.content })),
-            stream: true
-        });
-
-        abortController = response;
-
+        let fullContent = '';
+        const response = await askAI(model, messages, think);
         for await (const chunk of response) {
-            content += chunk.message.content || '';
-            if (onChunk) onChunk(content);
+            fullContent += chunk.message.content || '';
             if (requestId) {
                 postMessage({
                     type: 'streamChat',
                     id: requestId,
-                    data: { type: 'chunk', content }
+                    data: { type: 'chunk', value: fullContent }
                 });
             }
         }
-
-        if (onComplete) onComplete(content);
         if (requestId) {
             postMessage({
                 type: 'streamChat',
                 id: requestId,
-                data: { type: 'complete', content }
+                data: { type: 'complete' }
             });
         }
-
-        abortController = null;
     } catch (error) {
-        abortController = null;
-        const isAborted = error.name === 'AbortError';
-        const errorMsg = isAborted ? 'Stream cancelled' : `Error: ${error.message}`;
-
-        if (onError) onError(errorMsg, isAborted);
         if (requestId) {
             postMessage({
                 type: 'streamChat',
                 id: requestId,
-                data: { type: 'error', error: errorMsg, aborted: isAborted }
+                data: { type: 'error', error: error.message }
             });
         }
     }
-}
-
-async function streamChat(requestId, { model, messagesArray }) {
-    await streamChatInternal(model, messagesArray, requestId);
 }
 
 async function pullModel(requestId, { modelUrl }) {
@@ -134,43 +122,47 @@ function formatSize(bytes) {
 }
 
 function abortStream() {
-    if (abortController) {
-        ollama.abort();
-        abortController = null;
-    }
+    ollama.abort();
 }
 
 async function generateTitleAsync(userMessage, model) {
     if (!userMessage || !model) return 'New Chat';
+
     const TITLE_PROMPT = "Generate a short, descriptive title for this conversation in exactly 7 words or fewer. Do not use any thinking tags or markdown formatting. Just respond with the title directly:";
 
     try {
-        let lastValidTitle = 'New Chat';
-        await streamChatInternal(
-            model,
+        const response = await askAI(model,
             [{ role: 'user', content: `${TITLE_PROMPT} "${userMessage}"` }],
-            null, // no request id for title generation
-            chunk => {
-                const cleaned = cleanTitleResponse(chunk);
-                if (cleaned && cleaned !== 'New Chat' && cleaned.trim()) {
-                    lastValidTitle = cleaned;
-                }
-            },
-            final => lastValidTitle = cleanTitleResponse(final) || lastValidTitle,
-            () => lastValidTitle
+            false,
+            false
         );
-        return lastValidTitle;
-    } catch {
+
+        // Validate response structure
+        if (!response?.message?.content) {
+            console.warn('Title generation: Invalid response structure');
+            return 'New Chat';
+        }
+
+        let title = response.message.content;
+        return cleanTitle(title);
+    } catch (error) {
+        console.warn('Title generation failed:', error.message);
         return 'New Chat';
     }
 }
 
-function cleanTitleResponse(response) {
-    if (!response) return 'New Chat';
-    return response.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
+function cleanTitle(title) {
+    if (!title) return 'New Chat';
+    // Remove <think>...</think> and <answer> tags, but keep special characters/icons
+    return title
+        .replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
         .replace(/<\/?answer>/gi, '')
-        .replace(/[*_`#\[\]()]/g, '')
-        .trim().split(/\s+/).filter(w => w.length).slice(0, 7).join(' ') || 'New Chat';
+        .replace(/<\/?script.*?>/gi, '') // Remove <script> tags
+        .trim()
+        .split(/\s+/)
+        .filter(w => w.length)
+        .slice(0, 7)
+        .join(' ') || 'New Chat';
 }
 
 // Handle messages from main thread

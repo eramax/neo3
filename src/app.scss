@@ -889,6 +889,33 @@ body {
   color: #79c0ff;
 }
 
+// Styles for <details> and <summary> used for "thinking" blocks
+.content details.thinking-details {
+  background-color: $bg-secondary;
+  border: 1px solid $border;
+  border-radius: $radius;
+  margin: 16px 0;
+  padding: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  summary.thinking-summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: $accent;
+    margin-bottom: 8px;
+    outline: none;
+
+    &:hover {
+      color: $accent-hover;
+    }
+  }
+  // Basic styling for the content within details, if needed
+  p {
+    margin-top: 8px;
+    color: $text-muted;
+  }
+}
+
 // Input area
 .input-area {
   padding: 0.5rem;

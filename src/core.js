@@ -1,9 +1,6 @@
 // Icons
 export const modelLinkIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888888" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>`;
 
-// Constants
-const TITLE_PROMPT = "Generate a short, descriptive title for this conversation in exactly 7 words or fewer. Do not use any thinking tags or markdown formatting. Just respond with the title directly:";
-
 // Main app class - manages state and delegates processing to worker
 export class ChatApp {
     constructor() {
@@ -16,7 +13,6 @@ export class ChatApp {
         this.messages = this.load('chatMessages', {});
 
         this.setupWorker();
-        if (typeof window !== 'undefined') window.copyCodeToClipboard = this.copyCode.bind(this);
 
         // Initialize worker
         this.initWorker();
@@ -30,6 +26,7 @@ export class ChatApp {
             if (!request) return;
 
             if (error) {
+                console.error(`Worker error for request ${id}:`, error);
                 request.reject?.(new Error(error));
                 this.pendingRequests.delete(id);
                 return;
@@ -52,7 +49,7 @@ export class ChatApp {
 
                 case 'streamChat':
                     if (data.type === 'chunk') {
-                        request.onChunk?.(data.content);
+                        request.onChunk?.(data.value);
                     } else if (data.type === 'complete') {
                         request.onComplete?.(data.content);
                         this.pendingRequests.delete(id);
@@ -123,41 +120,6 @@ export class ChatApp {
         }
     }
 
-    // Code copying functionality
-    copyCode(button, code) {
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(code).then(() => {
-                const originalHTML = button.innerHTML;
-                button.innerHTML = '✓ Copied!';
-                setTimeout(() => button.innerHTML = originalHTML, 2000);
-            }).catch(() => {
-                this.fallbackCopyTextToClipboard(code, button);
-            });
-        } else {
-            this.fallbackCopyTextToClipboard(code, button);
-        }
-    }
-
-    fallbackCopyTextToClipboard(text, button) {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-999999px";
-        textArea.style.top = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            const originalHTML = button.innerHTML;
-            button.innerHTML = '✓ Copied!';
-            setTimeout(() => button.innerHTML = originalHTML, 2000);
-        } catch (err) {
-            console.error('Fallback: Oops, unable to copy', err);
-        }
-        document.body.removeChild(textArea);
-    }
-
     // Model management
     async loadModels() {
         return this.sendWorkerMessage('loadModels');
@@ -188,17 +150,20 @@ export class ChatApp {
         return [...this.messages[chatId]];
     }
 
+    updateLastMessage(chatId, content) {
+        if (!this.messages[chatId] || this.messages[chatId].length === 0) return;
+        const lastMessage = this.messages[chatId][this.messages[chatId].length - 1];
+        if (lastMessage) {
+            lastMessage.content = content;
+        }
+        return [...this.messages[chatId]];
+    }
+
     addMessageWithTitleGeneration(chatId, message, model) {
         if (!this.messages[chatId]) this.messages[chatId] = [];
-        const isFirstUserMessage = this.messages[chatId].length === 0 && message.role === 'user';
 
         this.messages[chatId].push(message);
         this.saveState();
-
-        if (isFirstUserMessage && model && message.content) {
-            // Generate title asynchronously and update immediately when response arrives
-            this.generateTitleAsync(chatId, message.content, model);
-        }
 
         return [...this.messages[chatId]];
     }
@@ -211,7 +176,10 @@ export class ChatApp {
                 userMessage,
                 model
             });
-            this.updateChatTitle(chatId, result.title);
+
+            if (result && result.title) {
+                this.updateChatTitle(chatId, result.title);
+            }
         } catch (error) {
             console.warn('Title generation failed:', error);
         }
@@ -235,7 +203,7 @@ export class ChatApp {
             this.worker.postMessage({
                 type: 'streamChat',
                 id,
-                data: { model, messagesArray: messages }
+                data: { model, messages }
             });
         });
     }

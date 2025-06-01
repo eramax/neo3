@@ -1,6 +1,6 @@
 import { LitElement, html, unsafeCSS } from 'lit';
 import { ChatApp } from "./core.js";
-import "./MDRender.js";
+import "./MDRenderer.js";
 import "./sidebar.js";
 import "./model-selector.js";
 import styles from './app.scss?inline';
@@ -19,7 +19,6 @@ export class ChatPage extends LitElement {
         modelsError: { state: true },
         ollamaUrl: { state: true },
         chats: { state: true },
-        streamingMessage: { state: true },
         isStreaming: { state: true },
         currentChatId: { state: true },
         currentMessages: { state: true },
@@ -144,6 +143,13 @@ export class ChatPage extends LitElement {
         this.message = "";
         const time = new Date().toLocaleTimeString();
 
+        // Ensure we have a chat ID
+        if (!this.currentChatId) {
+            const newChatId = this.app.createChat();
+            this.navigateToChat(newChatId);
+        }
+
+        // Add user message
         const userMsg = {
             role: "user",
             content: userMessage,
@@ -151,40 +157,121 @@ export class ChatPage extends LitElement {
             metadata: { model: this.selectedModel }
         };
 
-        this.currentMessages = this.app.addMessageWithTitleGeneration(
-            this.currentChatId,
-            userMsg,
-            this.selectedModel
-        );
+        this.currentMessages = this.app.addMessage(this.currentChatId, userMsg);
 
-        this.streamingMessage = "";
+        // Check if we need to generate a title (first user message)
+        const isFirstMessage = this.currentMessages.filter(m => m.role === "user").length === 1;
+        if (isFirstMessage && this.selectedModel) {
+            this.app.generateTitleAsync(this.currentChatId, userMessage, this.selectedModel);
+        }
+
+        // Add empty AI message
+        const aiMsg = {
+            role: "ai",
+            content: "",
+            time: new Date().toLocaleTimeString(),
+            metadata: { model: this.selectedModel }
+        };
+        this.currentMessages = this.app.addMessage(this.currentChatId, aiMsg);
+        const aiMessageIndex = this.currentMessages.length - 1;
+        const currentChatId = this.currentChatId; // Capture for closure
+
         this.isStreaming = true;
+        this.scrollToBottom();
 
         await this.app.streamResponse(
             this.selectedModel,
             this.currentMessages.filter((m) => m.role === "user" || m.role === "ai"),
             (chunk) => {
-                this.streamingMessage = chunk;
-                this.scrollToBottom();
+                // Only update if we're still on the same chat
+                if (this.currentChatId === currentChatId && this.currentMessages[aiMessageIndex]) {
+                    this.currentMessages[aiMessageIndex].content = chunk;
+                    this.scrollToBottom();
+                    this.requestUpdate();
+                }
             },
             (final) => {
-                const aiMsg = {
-                    role: "ai",
-                    content: final,
-                    time: new Date().toLocaleTimeString(),
-                    metadata: { model: this.selectedModel }
-                };
-                this.currentMessages = this.app.addMessage(this.currentChatId, aiMsg);
-                this.streamingMessage = "";
-                this.isStreaming = false;
-                this.scrollToBottom();
+                // Only update if we're still on the same chat
+                if (this.currentChatId === currentChatId && this.currentMessages[aiMessageIndex]) {
+                    this.currentMessages[aiMessageIndex].content = final || this.currentMessages[aiMessageIndex].content;
+                    this.app.saveState();
+                    this.isStreaming = false;
+                    this.showToast("Message completed", "success");
+                    this.scrollToBottom();
+                }
             },
             (error, aborted) => {
-                this.streamingMessage = aborted ? "" : error;
                 this.isStreaming = false;
+                if (aborted) {
+                    // Remove the AI message if aborted and still on same chat
+                    if (this.currentChatId === currentChatId) {
+                        this.currentMessages.splice(aiMessageIndex, 1);
+                        this.app.saveState();
+                        this.showToast("Message cancelled", "info");
+                    }
+                } else {
+                    // Update with error message if still on same chat
+                    if (this.currentChatId === currentChatId && this.currentMessages[aiMessageIndex]) {
+                        this.currentMessages[aiMessageIndex].content = `Error: ${error}`;
+                        this.app.saveState();
+                        this.showToast(`Error: ${error}`, "error");
+                    }
+                }
                 this.scrollToBottom();
             }
         );
+    }
+
+    showToast(message, type = "info") {
+        // Create toast notification
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+
+        // Style the toast
+        Object.assign(toast.style, {
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            color: 'white',
+            fontSize: '14px',
+            fontWeight: '500',
+            zIndex: '10000',
+            opacity: '0',
+            transform: 'translateY(-20px)',
+            transition: 'all 0.3s ease',
+            maxWidth: '300px',
+            wordWrap: 'break-word'
+        });
+
+        // Set background color based on type
+        const colors = {
+            success: '#10b981',
+            error: '#ef4444',
+            info: '#3b82f6'
+        };
+        toast.style.backgroundColor = colors[type] || colors.info;
+
+        document.body.appendChild(toast);
+
+        // Animate in
+        requestAnimationFrame(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+        });
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-20px)';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
     }
 
     async abortStream() {
@@ -259,98 +346,86 @@ export class ChatPage extends LitElement {
     render() {
         return html`
             <div class="app">
-                <sidebar-component
-                    .collapsed=${this.sidebarCollapsed}
-                    .chats=${this.chats}
-                    .currentChatId=${this.currentChatId}
-                    .onNewChat=${() => this.createNewChat()}
-                    .onNavigateToChat=${(id) => this.navigateToChat(id)}>
-                </sidebar-component>
-                <main class="main-content ${this.sidebarCollapsed ? 'sidebar-collapsed' : ''}">
-                    <div class="chat-header">
-                        <button class="toggle-sidebar-btn" @click=${this.toggleSidebar}>
-                            ${this.sidebarCollapsed ? "☰" : "✕"}
-                        </button>
-                        <h1 class="chat-title">${this.selectedChat}</h1>
-                        <model-selector
-                            .selectedModel=${this.selectedModel}
-                            .showModelSelector=${this.showModelSelector}
-                            .models=${this.models}
-                            .modelsLoading=${this.modelsLoading}
-                            .modelsError=${this.modelsError}
-                            .ollamaUrl=${this.ollamaUrl}
-                            .newModelMode=${this.newModelMode}
-                            .newModelUrl=${this.newModelUrl}
-                            .newModelProgress=${this.newModelProgress}
-                            .newModelError=${this.newModelError}
-                            .onToggleModelSelector=${() => this.toggleModelSelector()}
-                            .onSelectModel=${(modelId) => this.selectModel(modelId)}
-                            .onSaveUrl=${(url) => this.saveUrl(url)}
-                            .onSaveNewModel=${(modelUrl) => this.saveNewModel(modelUrl)}
-                            .onLoadModels=${() => this.loadModels()}>
-                        </model-selector>
-                    </div>
-                    <div class="messages">
-                        ${this.isNewChat ?
+            <sidebar-component
+                .collapsed=${this.sidebarCollapsed}
+                .chats=${this.chats}
+                .currentChatId=${this.currentChatId}
+                .onNewChat=${() => this.createNewChat()}
+                .onNavigateToChat=${(id) => this.navigateToChat(id)}>
+            </sidebar-component>
+            <main class="main-content ${this.sidebarCollapsed ? 'sidebar-collapsed' : ''}">
+                <div class="chat-header">
+                <button class="toggle-sidebar-btn" @click=${this.toggleSidebar}>
+                    ${this.sidebarCollapsed ? "☰" : "✕"}
+                </button>
+                <h1 class="chat-title">${this.selectedChat}</h1>
+                <model-selector
+                    .selectedModel=${this.selectedModel}
+                    .showModelSelector=${this.showModelSelector}
+                    .models=${this.models}
+                    .modelsLoading=${this.modelsLoading}
+                    .modelsError=${this.modelsError}
+                    .ollamaUrl=${this.ollamaUrl}
+                    .newModelMode=${this.newModelMode}
+                    .newModelUrl=${this.newModelUrl}
+                    .newModelProgress=${this.newModelProgress}
+                    .newModelError=${this.newModelError}
+                    .onToggleModelSelector=${() => this.toggleModelSelector()}
+                    .onSelectModel=${(modelId) => this.selectModel(modelId)}
+                    .onSaveUrl=${(url) => this.saveUrl(url)}
+                    .onSaveNewModel=${(modelUrl) => this.saveNewModel(modelUrl)}
+                    .onLoadModels=${() => this.loadModels()}>
+                </model-selector>
+                </div>
+                <div class="messages">
+                ${this.isNewChat ?
                 html`<div class="welcome-screen"><div class="welcome-content">
-                                <h2>Start a new conversation</h2>
-                                <p>Ask me anything, and I'll help you with coding, explanations, or general questions.</p>
-                            </div></div>` :
+                    <h2>Start a new conversation</h2>
+                    <p>Ask me anything, and I'll help you with coding, explanations, or general questions.</p>
+                    </div></div>` :
                 !Array.isArray(this.currentMessages) || this.currentMessages.length === 0 ?
                     html`<div class="empty-state"><div class="empty-content">
-                                    <p>No messages in this chat yet.</p>
-                                </div></div>` :
+                        <p>No messages in this chat yet.</p>
+                    </div></div>` :
                     html`${this.currentMessages.map(msg => html`
-                                    <div class="message ${msg.role === 'ai' ? 'ai-message' : 'user-message'}">
-                                        <div class="avatar">${msg.role === "ai" ? "🤖" : "👤"}</div>
-                                        <div class="message-content">
-                                            <div class="message-header">
-                                                <span class="sender">${msg.role === "ai" ? msg.metadata?.model || "AI" : "User"}</span>
-                                                <span class="time">${msg.time}</span>
-                                            </div>
-                                            <div class="content">
-                                                <incremental-markdown .content=${msg.content}></incremental-markdown>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `)}
-                                ${this.isStreaming ? html`
-                                    <div class="message ai-message streaming">
-                                        <div class="avatar">🤖</div>
-                                        <div class="message-content">
-                                            <div class="message-header">
-                                                <span class="sender">${this.selectedModel}</span>
-                                                <span class="time">${new Date().toLocaleTimeString()}</span>
-                                            </div>
-                                            ${this.streamingMessage ?
-                                html`<div class="content"><incremental-markdown .content=${this.streamingMessage}></incremental-markdown></div>` :
-                                html`<div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`
-                            }
-                                        </div>
-                                    </div>
-                                ` : ''}
-                        `}
-                    </div>
-                    <div class="input-area">
-                        <div class="input-container">
-                            <textarea 
-                                placeholder="Send a Message" 
-                                class="message-input" 
-                                rows="1" 
-                                ?disabled=${this.isStreaming}
-                                .value=${this.message}
-                                @input=${this.handleInput}
-                                @keydown=${this.handleKeyDown}></textarea>
-                            <button 
-                                class="send-btn ${this.isStreaming ? 'abort' : ''}" 
-                                @click=${this.isStreaming ? this.abortStream : this.sendMessage}
-                                ?disabled=${!this.isStreaming && !this.message.trim()}
-                                title="${this.isStreaming ? 'Cancel' : 'Send'}">
-                                ${this.isStreaming ? "⏹" : "⬆"}
-                            </button>
+                        <div class="message ${msg.role === 'ai' ? 'ai-message' : 'user-message'}">
+                        <div class="avatar">${msg.role === "ai" ? "🤖" : "👤"}</div>
+                        <div class="message-content">
+                            <div class="message-header">
+                            <span class="sender">${msg.role === "ai" ? msg.metadata?.model || "AI" : "User"}</span>
+                            <span class="time">${msg.time}</span>
+                            </div>
+                            <div class="content">
+                            ${!msg.content
+                            ? html`<div class="loading-dots"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`
+                            : html`<markdown-block .content=${msg.content}></markdown-x>`
+                        }
+                            </div>
                         </div>
-                    </div>
-                </main>
+                        </div>
+                    `)}
+                `}
+                </div>
+                <div class="input-area">
+                <div class="input-container">
+                    <textarea 
+                    placeholder="Send a Message" 
+                    class="message-input" 
+                    rows="1" 
+                    ?disabled=${this.isStreaming}
+                    .value=${this.message}
+                    @input=${this.handleInput}
+                    @keydown=${this.handleKeyDown}></textarea>
+                    <button 
+                    class="send-btn ${this.isStreaming ? 'abort' : ''}" 
+                    @click=${this.isStreaming ? this.abortStream : this.sendMessage}
+                    ?disabled=${!this.isStreaming && !this.message.trim()}
+                    title="${this.isStreaming ? 'Cancel' : 'Send'}">
+                    ${this.isStreaming ? "⏹" : "⬆"}
+                    </button>
+                </div>
+                </div>
+            </main>
             </div>
         `;
     }
