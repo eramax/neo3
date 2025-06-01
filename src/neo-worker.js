@@ -1,6 +1,7 @@
 import { Ollama } from "ollama/browser";
 
 let ollama = null;
+let currentAbortController = null;
 
 // Initialize Ollama instance
 function initOllama(host) {
@@ -20,9 +21,17 @@ async function askAI(model, messages, think = false, stream = true) {
 // Streaming implementation
 async function streamChat(requestId, { model, messages, think = true }) {
     try {
+        // Create new AbortController for this request
+        currentAbortController = new AbortController();
+
         let fullContent = '';
-        const response = await askAI(model, messages, think);
+        const response = await askAI(model, messages, think, true);
         for await (const chunk of response) {
+            // Check if aborted before processing chunk
+            if (currentAbortController.signal.aborted) {
+                break;
+            }
+
             fullContent += chunk.message.content || '';
             if (requestId) {
                 postMessage({
@@ -32,7 +41,9 @@ async function streamChat(requestId, { model, messages, think = true }) {
                 });
             }
         }
-        if (requestId) {
+
+        // Only send complete if not aborted
+        if (requestId && !currentAbortController.signal.aborted) {
             postMessage({
                 type: 'streamChat',
                 id: requestId,
@@ -41,12 +52,18 @@ async function streamChat(requestId, { model, messages, think = true }) {
         }
     } catch (error) {
         if (requestId) {
+            const isAborted = error.name === 'AbortError' || error.message.includes('aborted') || currentAbortController?.signal.aborted;
             postMessage({
                 type: 'streamChat',
                 id: requestId,
-                data: { type: 'error', error: error.message }
+                data: {
+                    type: isAborted ? 'aborted' : 'error',
+                    error: isAborted ? 'Request cancelled' : error.message
+                }
             });
         }
+    } finally {
+        currentAbortController = null;
     }
 }
 
@@ -122,7 +139,12 @@ function formatSize(bytes) {
 }
 
 function abortStream() {
-    ollama.abort();
+    if (currentAbortController) {
+        currentAbortController.abort();
+    }
+    if (ollama) {
+        ollama.abort();
+    }
 }
 
 async function generateTitleAsync(userMessage, model) {

@@ -54,7 +54,10 @@ export class ChatApp {
                         request.onComplete?.(data.content);
                         this.pendingRequests.delete(id);
                     } else if (data.type === 'error') {
-                        request.onError?.(data.error, data.aborted);
+                        request.onError?.(data.error, false);
+                        this.pendingRequests.delete(id);
+                    } else if (data.type === 'aborted') {
+                        request.onError?.(data.error, true);
                         this.pendingRequests.delete(id);
                     }
                     break;
