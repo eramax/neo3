@@ -99,3 +99,16 @@
   - Enhanced accordion styling with hover effects, selection states, and smooth transitions
   - Maintained all existing functionality while improving space efficiency and visual organization
   - Fixed SCSS syntax errors during implementation for successful build process
+
+## [June 3, 2025] - Model Selector UI Improvements
+
+- **Changed:** Enhanced model selector with fixed 450px width, auto-provider selection, status icons, and overflow handling
+- **Reason:** Improve user experience with streamlined provider/model selection and better visual feedback
+- **Impact:**
+  - Fixed model selector width to 450px for consistent sizing
+  - Auto-collapse other providers when selecting a new one
+  - Removed separate "Select Provider" button - clicking provider directly shows models and selects it
+  - Added status icons beside models instead of text for configured providers
+  - Model rows now take full width for better space utilization
+  - Added 70vh max height with overflow scroll for many models
+  - Improved responsive behavior and visual hierarchy

@@ -159,7 +159,11 @@ export class ChatPage extends LitElement {
 
     handleInput(e) { this.message = e.target.value; }
     toggleSidebar() { this.sidebarCollapsed = !this.sidebarCollapsed; }
-    toggleModelSelector() { this.showModelSelector = !this.showModelSelector; } selectModel(modelId) { this.selectedModel = modelId; this.showModelSelector = false; this.app.saveModel(modelId); }
+    toggleModelSelector() { this.showModelSelector = !this.showModelSelector; } selectModel(modelId) {
+        this.selectedModel = modelId;
+        this.showModelSelector = false;
+        this.app.saveModel(modelId);
+    }
 
     async saveNewModel(modelUrl) {
         this.newModelMode = true;

@@ -32,23 +32,20 @@ export class ModelSelector extends LitElement {
     get currentProvider() { return this.providers[this.selectedProvider] || this.providers.ollama; } get filteredModels() {
         return (this.models || []).filter(model => model.provider === this.selectedProvider);
     } toggleProvider(providerId) {
-        const newExpanded = new Set(this.expandedProviders);
-        if (newExpanded.has(providerId)) {
-            newExpanded.delete(providerId);
-        } else {
-            newExpanded.add(providerId);
+        // Close all other providers and open only the selected one
+        this.expandedProviders = new Set([providerId]);
+
+        // If clicking on already selected provider, select it but keep it expanded
+        if (this.selectedProvider !== providerId) {
+            this.selectedProvider = providerId;
+            this.onSelectProvider?.(providerId);
         }
-        this.expandedProviders = newExpanded;
+
         this.requestUpdate();
     }
 
-    selectProvider(providerId) {
-        this.selectedProvider = providerId;
-        this.onSelectProvider?.(providerId);
-        // Auto-expand when selecting a provider
-        if (!this.expandedProviders.has(providerId)) {
-            this.toggleProvider(providerId);
-        }
+    selectModel(modelId) {
+        this.onSelectModel?.(modelId);
     }
 
     startProviderEdit(providerId) {
@@ -120,33 +117,27 @@ export class ModelSelector extends LitElement {
             }} title="Configure ${provider.name}">⚙️</button>
                                             <span class="accordion-chevron ${this.expandedProviders.has(id) ? 'expanded' : ''}">▼</span>
                                         </div>
-                                    </div>
-                                    ${this.expandedProviders.has(id) ? html`
+                                    </div>                                    ${this.expandedProviders.has(id) ? html`
                                         <div class="accordion-content">
-                                            ${this.selectedProvider === id ? html`
-                                                <div class="provider-status">
-                                                    <div class="status-indicator status-${this.connectionStatus}"></div>
-                                                    <span class="status-text">
-                                                        ${this.connectionStatus === 'connected' ? 'Connected' :
-                        this.connectionStatus === 'error' ? 'Connection failed' : 'Connecting...'}
-                                                    </span>
-                                                </div>
-                                            ` : ''}
-                                            
-                                            ${this.selectedProvider !== id ? html`
-                                                <button class="select-provider-btn" @click=${() => this.selectProvider(id)}>
-                                                    Select ${provider.name}
-                                                </button>
-                                            ` : this.modelsLoading ? html`
+                                            ${this.modelsLoading && this.selectedProvider === id ? html`
                                                 <div class="model-loading">
                                                     <div class="loading-spinner"></div>
                                                     <span>Loading models...</span>
                                                 </div>
-                                            ` : this.filteredModels.length > 0 ? html`
+                                            ` : this.filteredModels.length > 0 && this.selectedProvider === id ? html`
                                                 <div class="models-grid">
                                                     ${this.filteredModels.map(model => html`
                                                         <button class="model-card ${model.id === this.selectedModel ? 'selected' : ''}"
-                                                            @click=${() => this.onSelectModel?.(model.id)}>
+                                                            @click=${() => this.selectModel(model.id)}>
+                                                            <div class="model-status-icon">
+                                                                ${provider.requiresApiKey && provider.apiKey ? html`
+                                                                    <div class="status-indicator status-${this.connectionStatus}"></div>
+                                                                ` : !provider.requiresApiKey ? html`
+                                                                    <div class="status-indicator status-${this.connectionStatus}"></div>
+                                                                ` : html`
+                                                                    <div class="status-indicator status-error"></div>
+                                                                `}
+                                                            </div>
                                                             <span class="model-title-display" title="${model.name}">${model.name}</span>
                                                             <span class="model-badges">
                                                                 ${model.size ? html`<span class="badge size" title="Size">${model.size}</span>` : ''}
@@ -195,13 +186,13 @@ export class ModelSelector extends LitElement {
                                                         `}
                                                     ` : ''}
                                                 </div>
-                                            ` : html`
+                                            ` : this.selectedProvider === id ? html`
                                                 <div class="no-connection">
                                                     <div class="no-connection-icon">🔌</div>
                                                     <span>No connection to ${provider.name}</span>
                                                     <button @click=${() => this.onLoadModels?.()} class="retry-btn-compact">↻ Retry</button>
                                                 </div>
-                                            `}
+                                            ` : ''}
                                         </div>
                                     ` : ''}
                                 </div>
