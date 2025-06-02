@@ -15,24 +15,27 @@ export class ChatPage extends LitElement {
         currentChatId: { state: true }, currentMessages: { state: true }, currentChat: { state: true },
         isNewChat: { state: true }, newModelMode: { state: true }, newModelUrl: { state: true },
         newModelProgress: { state: true }, newModelError: { state: true }
-    }; constructor() {
+    };
+
+    constructor() {
         super();
-        this.app = new ChatApp();
         Object.assign(this, {
-            selectedChat: "New Chat", message: "", selectedModel: this.app.getStoredModel(), showModelSelector: false,
+            selectedChat: "New Chat", message: "", selectedModel: null, showModelSelector: false,
             sidebarCollapsed: false, models: [], modelsLoading: true, modelsError: null,
             streamingMessage: "", isStreaming: false, currentChatId: null, currentMessages: [],
             currentChat: null, isNewChat: false, newModelMode: false, newModelUrl: "",
             newModelProgress: null, newModelError: null, chats: []
         });
+        this.app = new ChatApp();
         this.ollamaUrl = this.app.getStoredUrl();
         this.loadChats();
     }
 
-    loadChats() { this.chats = this.app.getChats(); } connectedCallback() {
+    loadChats() { this.chats = this.app.getChats(); }
+
+    connectedCallback() {
         super.connectedCallback();
-        // Wait a moment for component to be ready, then load models
-        setTimeout(() => this.loadModels(), 100);
+        this.loadModels();
         const updateFromUrl = () => {
             const chatId = window.location.pathname.substring(1);
             if (chatId !== this.currentChatId) this.updateCurrentChat(chatId);
@@ -47,28 +50,18 @@ export class ChatPage extends LitElement {
             }
         });
         updateFromUrl();
-    } async loadModels() {
+    }
+
+    async loadModels() {
         this.modelsLoading = true;
-        this.modelsError = null;
         try {
             this.models = await this.app.loadModels();
-            const storedModel = this.app.getStoredModel();
-            const firstModel = this.models[0]?.id;
-
-            // Auto-select stored model or first available model
-            if (storedModel && this.models.find(m => m.id === storedModel)) {
-                this.selectedModel = storedModel;
-            } else if (firstModel) {
-                this.selectedModel = firstModel;
-                this.app.saveModel(firstModel); // Save the auto-selected model
-            }
-
+            this.selectedModel = this.selectedModel || this.app.getStoredModel() || this.models[0]?.id;
+            this.modelsError = null;
         } catch (err) {
-            console.error('Failed to load models:', err);
-            this.modelsError = err.message || 'Failed to connect to Ollama server';
-        } finally {
-            this.modelsLoading = false;
+            this.modelsError = err.message;
         }
+        this.modelsLoading = false;
     }
 
     updateCurrentChat(chatId) {

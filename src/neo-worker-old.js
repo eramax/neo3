@@ -1,23 +1,11 @@
-// Optimized Neo3 worker with lazy loading
-let Ollama = null;
+import { Ollama } from "ollama/browser";
+
 let ollama = null;
 let abortController = null;
 
-const loadOllama = async () => {
-    if (!Ollama) {
-        const module = await import('ollama/browser');
-        Ollama = module.Ollama;
-    }
-    return Ollama;
-};
+const initOllama = host => ollama = new Ollama({ host });
 
-const initOllama = async host => {
-    const OllamaClass = await loadOllama();
-    ollama = new OllamaClass({ host });
-    return ollama;
-};
-
-const chatWithOllama = async (model, messagesArray, stream = true) =>
+const chatWithOllama = async (model, messagesArray, stream = true) => 
     await ollama.chat({
         model,
         messages: messagesArray.map(m => ({ role: m.role, content: m.content })),
@@ -32,18 +20,18 @@ const streamChatInternal = async (model, messagesArray, requestId, onChunk, onCo
 
         for await (const chunk of response) {
             content += chunk.message.content || '';
-            onChunk && onChunk(content);
+            onChunk?.(content);
             requestId && postMessage({ type: 'streamChat', id: requestId, data: { type: 'chunk', content } });
         }
 
-        onComplete && onComplete(content);
+        onComplete?.(content);
         requestId && postMessage({ type: 'streamChat', id: requestId, data: { type: 'complete', content } });
         abortController = null;
     } catch (error) {
         abortController = null;
         const isAborted = error.name === 'AbortError';
         const errorMsg = isAborted ? 'Stream cancelled' : `Error: ${error.message}`;
-        onError && onError(errorMsg, isAborted);
+        onError?.(errorMsg, isAborted);
         requestId && postMessage({ type: 'streamChat', id: requestId, data: { type: 'error', error: errorMsg, aborted: isAborted } });
     }
 };
@@ -108,7 +96,7 @@ const abortStream = () => {
 const generateTitleAsync = async (userMessage, model) => {
     if (!userMessage || !model) return 'New Chat';
     const TITLE_PROMPT = "Generate a short, descriptive title for this conversation in exactly 7 words or fewer. Do not use any thinking tags or markdown formatting. Just respond with the title directly:";
-
+    
     try {
         let lastValidTitle = 'New Chat';
         await streamChatInternal(
@@ -117,14 +105,9 @@ const generateTitleAsync = async (userMessage, model) => {
             null,
             chunk => {
                 const cleaned = cleanTitleResponse(chunk);
-                if (cleaned && cleaned !== 'New Chat' && cleaned.trim()) {
-                    lastValidTitle = cleaned;
-                }
+                if (cleaned && cleaned !== 'New Chat' && cleaned.trim()) lastValidTitle = cleaned;
             },
-            final => {
-                const cleaned = cleanTitleResponse(final);
-                if (cleaned) lastValidTitle = cleaned;
-            },
+            final => lastValidTitle = cleanTitleResponse(final) || lastValidTitle,
             () => lastValidTitle
         );
         return lastValidTitle;
@@ -145,7 +128,7 @@ self.onmessage = async ({ data: { type, id, data } }) => {
     try {
         switch (type) {
             case 'init':
-                await initOllama(data.host);
+                initOllama(data.host);
                 postMessage({ type: 'init', id, success: true });
                 break;
             case 'loadModels':
@@ -165,6 +148,126 @@ self.onmessage = async ({ data: { type, id, data } }) => {
                 const title = await generateTitleAsync(data.userMessage, data.model);
                 postMessage({ type: 'generateTitle', id, data: { title } });
                 break;
+            default:
+                throw new Error(`Unknown message type: ${type}`);
+        }
+    } catch (error) {
+        postMessage({ type, id, error: error.message });
+    }
+};
+            type: 'pullModel',
+            id: requestId,
+            data: { status: null, percent: 0, model: modelUrl, error: error.message }
+        });
+    }
+}
+
+async function loadModels() {
+    const response = await ollama.list();
+    const models = response.models.map(model => {
+        const baseName = model.name.split(':')[0];
+        let displayName = baseName;
+        let link = `https://ollama.com/library/${displayName}`;
+
+        if (baseName.startsWith('hf.co/')) {
+            const hfPath = baseName.substring(6);
+            displayName = hfPath.split('/').pop().replace(/-GGUF$/i, '');
+            link = `https://huggingface.co/${hfPath}`;
+        }
+
+        return {
+            id: model.name,
+            name: displayName,
+            arch: model.details?.family || 'Unknown',
+            size: formatSize(model.size),
+            format: model.details?.format?.toUpperCase() || 'Unknown',
+            link,
+            details: model.details || {}
+        };
+    });
+    return models;
+}
+
+function formatSize(bytes) {
+    if (!bytes) return 'Unknown';
+    const gb = bytes / (1024 ** 3);
+    return gb >= 1 ? `${gb.toFixed(1)}GB` : `${(bytes / (1024 ** 2)).toFixed(0)}MB`;
+}
+
+function abortStream() {
+    if (abortController) {
+        ollama.abort();
+        abortController = null;
+    }
+}
+
+async function generateTitleAsync(userMessage, model) {
+    if (!userMessage || !model) return 'New Chat';
+    const TITLE_PROMPT = "Generate a short, descriptive title for this conversation in exactly 7 words or fewer. Do not use any thinking tags or markdown formatting. Just respond with the title directly:";
+
+    try {
+        let lastValidTitle = 'New Chat';
+        await streamChatInternal(
+            model,
+            [{ role: 'user', content: `${TITLE_PROMPT} "${userMessage}"` }],
+            null, // no request id for title generation
+            chunk => {
+                const cleaned = cleanTitleResponse(chunk);
+                if (cleaned && cleaned !== 'New Chat' && cleaned.trim()) {
+                    lastValidTitle = cleaned;
+                }
+            },
+            final => lastValidTitle = cleanTitleResponse(final) || lastValidTitle,
+            () => lastValidTitle
+        );
+        return lastValidTitle;
+    } catch {
+        return 'New Chat';
+    }
+}
+
+function cleanTitleResponse(response) {
+    if (!response) return 'New Chat';
+    return response.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
+        .replace(/<\/?answer>/gi, '')
+        .replace(/[*_`#\[\]()]/g, '')
+        .trim().split(/\s+/).filter(w => w.length).slice(0, 7).join(' ') || 'New Chat';
+}
+
+// Handle messages from main thread
+self.onmessage = async function (e) {
+    const { type, id, data } = e.data;
+
+    try {
+        switch (type) {
+            case 'init':
+                initOllama(data.host);
+                postMessage({ type: 'init', id, success: true });
+                break;
+
+            case 'loadModels':
+                const models = await loadModels();
+                postMessage({ type: 'loadModels', id, data: models });
+                break;
+
+            case 'streamChat':
+                await streamChat(id, data);
+                break;
+
+            case 'pullModel':
+                await pullModel(id, data);
+                break;
+
+            case 'abort':
+                abortStream();
+                postMessage({ type: 'abort', id, success: true });
+                break;
+
+            case 'generateTitle':
+                const title = await generateTitleAsync(data.userMessage, data.model);
+                postMessage({ type: 'generateTitle', id, data: { title } });
+                break;
+
             default:
                 throw new Error(`Unknown message type: ${type}`);
         }

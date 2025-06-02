@@ -9,9 +9,19 @@ export default defineConfig({
     build: {
         outDir: './build',
         emptyOutDir: true,
+        chunkSizeWarningLimit: 1000,
         rollupOptions: {
-            input: 'index.html'
+            input: 'index.html',
+            output: {
+                manualChunks: {
+                    'vendor': ['lit', 'lit-element'],
+                    'ollama': ['ollama/browser']
+                }
+            }
         }
+    },
+    worker: {
+        format: 'es'
     },
     resolve: {
         alias: {

@@ -45,9 +45,9 @@ export class ModelSelector extends LitElement {
                                 <div class="server-status-indicator status-${this.connectionStatus}"></div>
                                 <span class="server-url-display">${this.ollamaUrl}</span>
                                 <button class="server-action-btn edit" @click=${() => {
-                                    this.showUrlEditor = true;
-                                    this.tempUrl = this.ollamaUrl;
-                                }} title="Edit">✎</button>
+                        this.showUrlEditor = true;
+                        this.tempUrl = this.ollamaUrl;
+                    }} title="Edit">✎</button>
                             `}
                         </div>
                         ${this.modelsLoading ? html`
@@ -84,24 +84,24 @@ export class ModelSelector extends LitElement {
                                             @input=${e => this.newModelUrl = e.target.value}
                                             placeholder="model name or URL (e.g. llama3)" autofocus
                                             @keydown=${e => {
-                                                e.key === "Enter" && this.onSaveNewModel?.(this.newModelUrl);
-                                                e.key === "Escape" && Object.assign(this, { newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null });
-                                            }}
+                            e.key === "Enter" && this.onSaveNewModel?.(this.newModelUrl);
+                            e.key === "Escape" && Object.assign(this, { newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null });
+                        }}
                                             ?disabled=${!!this.newModelProgress} />
                                         <button class="server-action-btn save" @click=${() => this.onSaveNewModel?.(this.newModelUrl)}
                                             ?disabled=${!this.newModelUrl.trim() || !!this.newModelProgress} title="Pull model">✓</button>
-                                        <button class="server-action-btn cancel" @click=${() => Object.assign(this, { 
-                                            newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null 
-                                        })} title="Cancel">✕</button>
+                                        <button class="server-action-btn cancel" @click=${() => Object.assign(this, {
+                            newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null
+                        })} title="Cancel">✕</button>
                                         ${this.newModelProgress ? html`<span class="new-model-progress">
                                             ${this.newModelProgress.status}${typeof this.newModelProgress.percent === "number" ? ` (${this.newModelProgress.percent}%)` : ''}
                                         </span>` : ''}
                                         ${this.newModelError ? html`<span class="new-model-error">${this.newModelError}</span>` : ''}
                                     </div>
                                 ` : html`
-                                    <button class="model-card single-line new-model-row" @click=${() => Object.assign(this, { 
-                                        newModelMode: true, newModelUrl: "", newModelProgress: null, newModelError: null 
-                                    })} title="Pull new model">
+                                    <button class="model-card single-line new-model-row" @click=${() => Object.assign(this, {
+                            newModelMode: true, newModelUrl: "", newModelProgress: null, newModelError: null
+                        })} title="Pull new model">
                                         <span class="model-title-display">+ New model</span>
                                     </button>
                                 `}

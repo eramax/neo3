@@ -10,7 +10,7 @@ export class SidebarComponent extends LitElement {
         super();
         Object.assign(this, {
             collapsed: false, chats: [], currentChatId: null,
-            onNewChat: () => { }, onNavigateToChat: () => { }
+            onNewChat: () => {}, onNavigateToChat: () => {}
         });
     }
 
@@ -41,6 +41,20 @@ export class SidebarComponent extends LitElement {
                 </div>
                 <div class="user-settings">
                     <div class="user-profile">
+                        <div class="user-avatar">👤</div>
+                        <div class="user-info">
+                            <div class="user-name">User</div>
+                            <div class="user-status">Online</div>
+                        </div>
+                        <button class="settings-btn">⚙️</button>
+                    </div>
+                </div>
+            </aside>
+        `;
+    }
+}
+
+customElements.define('sidebar-component', SidebarComponent);
                         <div class="user-avatar">👤</div>
                         <div class="user-info">
                             <div class="user-name">User</div>

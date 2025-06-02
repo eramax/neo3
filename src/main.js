@@ -1,12 +1,23 @@
 import './chat-page.js';
 
-// Initialize the application
-console.log('Neo3 Chat application loaded');
-
-// Add any global initialization logic here
-if (typeof window !== 'undefined') {
-    // Set up any global event listeners or configurations
-    window.addEventListener('error', (e) => {
-        console.error('Application error:', e.error);
+// Global error handler and copy functionality
+window.addEventListener('error', e => console.error('App error:', e.error));
+window.copyCodeToClipboard = (btn, code) => {
+    navigator.clipboard?.writeText(code).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '✓ Copied!';
+        setTimeout(() => btn.innerHTML = orig, 2000);
+    }).catch(() => {
+        const ta = Object.assign(document.createElement("textarea"), {
+            value: code,
+            style: "position:fixed;left:-999999px;top:-999999px"
+        });
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        const orig = btn.innerHTML;
+        btn.innerHTML = '✓ Copied!';
+        setTimeout(() => btn.innerHTML = orig, 2000);
     });
-}
+};

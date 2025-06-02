@@ -1,21 +1,9 @@
-// Optimized Neo3 worker with lazy loading
-let Ollama = null;
+import { Ollama } from "ollama/browser";
+
 let ollama = null;
 let abortController = null;
 
-const loadOllama = async () => {
-    if (!Ollama) {
-        const module = await import('ollama/browser');
-        Ollama = module.Ollama;
-    }
-    return Ollama;
-};
-
-const initOllama = async host => {
-    const OllamaClass = await loadOllama();
-    ollama = new OllamaClass({ host });
-    return ollama;
-};
+const initOllama = host => ollama = new Ollama({ host });
 
 const chatWithOllama = async (model, messagesArray, stream = true) =>
     await ollama.chat({
@@ -145,7 +133,7 @@ self.onmessage = async ({ data: { type, id, data } }) => {
     try {
         switch (type) {
             case 'init':
-                await initOllama(data.host);
+                initOllama(data.host);
                 postMessage({ type: 'init', id, success: true });
                 break;
             case 'loadModels':

@@ -6,9 +6,8 @@ export class ChatApp {
         this.pendingRequests = new Map();
         this.chats = this.load('chats', []);
         this.messages = this.load('chatMessages', {});
-        this.initialized = false;
         this.setupWorker();
-        this.initPromise = this.initWorker();
+        this.initWorker();
     }
 
     setupWorker() {
@@ -50,16 +49,10 @@ export class ChatApp {
                     break;
             }
         };
-    } async initWorker() {
-        const host = this.load('ollamaUrl', 'http://localhost:11434');
-        await this.sendWorkerMessage('init', { host });
-        this.initialized = true;
     }
 
-    async ensureInitialized() {
-        if (!this.initialized) {
-            await this.initPromise;
-        }
+    initWorker() {
+        return this.sendWorkerMessage('init', { host: this.load('ollamaUrl', 'http://localhost:11434') });
     }
 
     sendWorkerMessage(type, data = {}) {
@@ -96,11 +89,13 @@ export class ChatApp {
                 detail: { chatId, newTitle: title }
             }));
         }
-    } async loadModels() {
-        await this.ensureInitialized();
+    }
+
+    async loadModels() {
         return this.sendWorkerMessage('loadModels');
-    } async pullModel(modelUrl, onProgress) {
-        await this.ensureInitialized();
+    }
+
+    async pullModel(modelUrl, onProgress) {
         return new Promise((resolve, reject) => {
             const id = ++this.requestId;
             this.pendingRequests.set(id, { resolve, reject, onProgress });
@@ -139,8 +134,9 @@ export class ChatApp {
         } catch (e) {
             console.warn('Title generation failed:', e);
         }
-    } async streamResponse(model, messages, onChunk, onComplete, onError) {
-        await this.ensureInitialized();
+    }
+
+    async streamResponse(model, messages, onChunk, onComplete, onError) {
         return new Promise(resolve => {
             const id = ++this.requestId;
             this.pendingRequests.set(id, {
@@ -168,11 +164,11 @@ export class ChatApp {
             return [...this.messages[chatId]];
         }
         return null;
-    } async saveUrl(url) {
+    }
+
+    async saveUrl(url) {
         this.save('ollamaUrl', url);
-        this.initialized = false; // Reset initialization state
-        this.initPromise = this.initWorker(); // Re-initialize with new URL
-        await this.initPromise;
+        await this.sendWorkerMessage('init', { host: url });
     }
 
     saveModel(model) {
