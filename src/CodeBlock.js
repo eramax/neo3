@@ -24,11 +24,11 @@ export class CodeBlock extends HTMLElement {
         this.render();
     }
 
-    attributeChangedCallback() {
-        if (this.isConnected) {
-            this.render();
-        }
-    }
+    // attributeChangedCallback() {
+    //     if (this.isConnected) {
+    //         this.render();
+    //     }
+    // }
 
     get language() {
         return this.getAttribute('language') || 'plaintext';
@@ -44,6 +44,9 @@ export class CodeBlock extends HTMLElement {
 
     set code(value) {
         this.setAttribute('code', value || '');
+        if (this.isConnected) {
+            this.render();
+        }
     }
 
     render() {
