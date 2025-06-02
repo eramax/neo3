@@ -49,3 +49,15 @@
   - Configured Vite manual chunking for optimal cache strategies
   - Maintained all original functionality with zero breaking changes
   - Build time improved from 1.57s to 1.04s (33% faster)
+
+## [June 2, 2025] - MDRender.js Reversion to Original Implementation
+
+- **Changed:** Reverted MDRender.js from optimized lightweight version back to original remark-based implementation
+- **Reason:** Ensure compatibility and maintain full markdown parsing capabilities with unified/remark ecosystem
+- **Impact:**
+  - Restored full incremental markdown rendering with AST-based updates
+  - Re-enabled advanced markdown features including GFM (GitHub Flavored Markdown)
+  - Better handling of complex markdown structures and edge cases
+  - Maintained copy functionality and think block processing
+  - File size increased from 150 to 470 lines but with superior markdown parsing accuracy
+  - Better performance for incremental updates during streaming content

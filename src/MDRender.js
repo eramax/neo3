@@ -1,148 +1,468 @@
-// Optimized markdown renderer with lazy loading
-let hljs = null;
-const loadHighlight = async () => {
-    if (!hljs) {
-        const module = await import('highlight.js');
-        hljs = module.default;
-    }
-    return hljs;
+import { unified } from "unified";
+import remarkParse from "remark-parse";
+import remarkGfm from "remark-gfm";
+import hljs from "highlight.js";
+
+// Constants
+const HTML_ESCAPE_MAP = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
 };
+
+const COPY_ICON_SVG = `<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>`;
+
+const UPDATABLE_NODE_TYPES = new Set([
+    'text', 'inlineCode', 'html', 'code', 'paragraph',
+    'heading', 'strong', 'emphasis', 'blockquote',
+    'list', 'listItem', 'link'
+]);
 
 export class IncrementalMarkdown extends HTMLElement {
     constructor() {
         super();
-        this._content = '';
+        this._internalContent = '';
         this._container = document.createElement('div');
-        this.appendChild(this._container);
-        this._container.addEventListener('click', e => {
-            const btn = e.target.closest('.copy-code-btn');
-            if (btn) this.copyCode(btn);
+        this._lastProcessedAst = null;
+        this.processedLength = 0;
+        this.processor = unified().use(remarkParse).use(remarkGfm);
+        this._setupEventListeners();
+    }
+
+    connectedCallback() {
+        if (!this._container.parentNode) {
+            this.appendChild(this._container);
+        }
+    }
+
+    get content() {
+        return this._internalContent;
+    }
+
+    set content(value) {
+        if (this._internalContent === value) return;
+        this._internalContent = this._preprocessContent(value);
+        this._updateRenderedContent();
+    }
+
+    get copyIcon() {
+        return COPY_ICON_SVG;
+    }
+
+    // Content preprocessing
+    _preprocessContent(value) {
+        if (!value) return value;
+
+        // Handle unclosed <think> tags
+        const openThinkCount = (value.match(/<think>/g) || []).length;
+        const closeThinkCount = (value.match(/<\/think>/g) || []).length;
+
+        let processedValue = value;
+        if (openThinkCount > closeThinkCount) {
+            processedValue += "</think>";
+        }
+
+        // Convert <think> blocks to details code blocks
+        return processedValue.replace(/<think>([\s\S]*?)<\/think>/g, "```details\n$1\n```");
+    }
+
+    // Event handling
+    _setupEventListeners() {
+        this._container.addEventListener('click', (event) => {
+            const copyButton = event.target.closest('.copy-code-btn');
+            if (copyButton) {
+                this.copyCode(copyButton);
+            }
         });
     }
 
-    get content() { return this._content; }
-
-    set content(value) {
-        if (this._content === value) return;
-        this._content = this._preprocessContent(value);
-        this._render();
+    // DOM management
+    _clearContainerDOM() {
+        this._container.innerHTML = '';
     }
 
-    _preprocessContent(value) {
-        if (!value) return value;
-        const openThinkCount = (value.match(/<think>/g) || []).length;
-        const closeThinkCount = (value.match(/<\/think>/g) || []).length;
-        let processed = value;
-        if (openThinkCount > closeThinkCount) processed += "</think>";
-        return processed.replace(/<think>([\s\S]*?)<\/think>/g, "```details\n$1\n```");
+    _createElementFromHTML(htmlString) {
+        if (!htmlString || typeof htmlString !== 'string') return null;
+        const div = document.createElement('div');
+        div.innerHTML = htmlString.trim();
+        return div.firstChild;
     }
 
-    async _render() {
+    // Main rendering logic
+    _updateRenderedContent() {
         if (!this.content) {
-            this._container.innerHTML = '';
+            this._clearContainerDOM();
+            this._resetState();
             return;
         }
-        try {
-            this._container.innerHTML = await this._parseMarkdown(this.content);
-        } catch (e) {
-            this._container.innerHTML = `<p>${this._escapeHtml(this.content)}</p>`;
-        }
+
+        const newAst = this.processor.parse(this.content);
+
+        this._updateDOM(newAst);
+        this._lastProcessedAst = newAst;
+        this.processedLength = this.content.length;
     }
 
-    async _parseMarkdown(text) {
-        // Process code blocks first
-        text = await this._processCodeBlocks(text);
-
-        // Process other markdown elements
-        return text
-            .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-            .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-            .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/\*(.*?)\*/g, '<em>$1</em>')
-            .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
-            .replace(/\n/g, '<br>');
+    _resetState() {
+        this.processedLength = 0;
+        this._lastProcessedAst = null;
     }
 
-    async _processCodeBlocks(text) {
-        const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-        const matches = [...text.matchAll(codeBlockRegex)];
+    _updateDOM(newAst) {
+        const newChildren = newAst.children || [];
+        const oldChildren = this._lastProcessedAst?.children || [];
 
-        if (matches.length === 0) return text;
-
-        let result = text;
-        for (const [fullMatch, lang, code] of matches) {
-            const blockHtml = await this._renderCodeBlock(lang, code);
-            result = result.replace(fullMatch, blockHtml);
-        }
-
-        return result;
+        const { updatedIndices, newDomElements } = this._processNodeChanges(newChildren, oldChildren);
+        this._applyDOMChanges(updatedIndices, newDomElements);
     }
 
-    async _renderCodeBlock(lang, code) {
-        const isDetails = lang === 'details';
+    _processNodeChanges(newChildren, oldChildren) {
+        const updatedIndices = [];
+        const newDomElements = [];
 
-        if (isDetails) {
-            return `<details class="think-block"><summary>💭 Thinking...</summary><div class="think-content">${this._escapeHtml(code)}</div></details>`;
-        }
+        for (let i = 0; i < newChildren.length; i++) {
+            const newNode = newChildren[i];
+            const oldNode = oldChildren[i];
+            const existingElement = this._container.children[i];
 
-        let highlightedCode = this._escapeHtml(code);
-
-        if (lang) {
-            try {
-                const highlight = await loadHighlight();
-                if (highlight.getLanguage(lang)) {
-                    highlightedCode = highlight.highlight(code, { language: lang }).value;
-                }
-            } catch (e) {
-                // Fallback to escaped HTML
+            if (!oldNode || !this._nodesEqual(newNode, oldNode)) {
+                updatedIndices.push(i);
+                newDomElements[i] = this._createOrUpdateElement(newNode, oldNode, existingElement);
+            } else {
+                newDomElements[i] = existingElement;
             }
         }
 
-        return `<div class="code-block-container">
-            <div class="code-block-header">
-                <span class="code-language">${lang || 'text'}</span>
-                <button class="copy-code-btn" title="Copy code">⧉</button>
-            </div>
-            <pre class="code-block"><code class="hljs ${lang || ''}">${highlightedCode}</code></pre>
-        </div>`;
+        return { updatedIndices, newDomElements };
     }
 
-    _escapeHtml(text) {
-        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-        return text.replace(/[&<>"']/g, m => map[m]);
+    _createOrUpdateElement(newNode, oldNode, existingElement) {
+        if (existingElement && oldNode && this._canUpdateInPlace(newNode, oldNode)) {
+            this._updateElementInPlace(existingElement, newNode, oldNode);
+            return existingElement;
+        }
+
+        const html = this.createHTMLFromNode(newNode);
+        return this._createElementFromHTML(html);
     }
 
-    copyCode(button) {
-        const codeBlock = button.closest('.code-block-container')?.querySelector('code');
-        if (!codeBlock) return;
+    _applyDOMChanges(updatedIndices, newDomElements) {
+        const oldDomNodes = Array.from(this._container.children);
 
-        const code = codeBlock.textContent;
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(code).then(() => this._showCopyFeedback(button))
-                .catch(() => this._fallbackCopy(code, button));
-        } else {
-            this._fallbackCopy(code, button);
+        // Replace changed elements
+        updatedIndices.forEach(index => {
+            const newElement = newDomElements[index];
+            const oldElement = oldDomNodes[index];
+
+            if (newElement && oldElement && newElement !== oldElement) {
+                this._container.replaceChild(newElement, oldElement);
+            }
+        });
+
+        // Handle length differences
+        this._adjustContainerLength(newDomElements, oldDomNodes);
+    }
+
+    _adjustContainerLength(newDomElements, oldDomNodes) {
+        const newCount = newDomElements.length;
+        const oldCount = oldDomNodes.length;
+
+        if (newCount > oldCount) {
+            const fragment = document.createDocumentFragment();
+            for (let i = oldCount; i < newCount; i++) {
+                if (newDomElements[i]) {
+                    fragment.appendChild(newDomElements[i]);
+                }
+            }
+            this._container.appendChild(fragment);
+        } else if (newCount < oldCount) {
+            for (let i = oldCount - 1; i >= newCount; i--) {
+                if (oldDomNodes[i]) {
+                    this._container.removeChild(oldDomNodes[i]);
+                }
+            }
         }
     }
 
-    _fallbackCopy(text, button) {
-        const textarea = Object.assign(document.createElement('textarea'), {
-            value: text,
-            style: 'position:fixed;left:-999999px;top:-999999px'
-        });
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        this._showCopyFeedback(button);
+    // Node comparison and updating
+    _canUpdateInPlace(newNode, oldNode) {
+        return newNode.type === oldNode.type && UPDATABLE_NODE_TYPES.has(newNode.type);
     }
 
-    _showCopyFeedback(button) {
-        const original = button.innerHTML;
-        button.innerHTML = '✓ Copied!';
-        setTimeout(() => button.innerHTML = original, 2000);
+    _updateElementInPlace(element, newNode, oldNode) {
+        const updateHandlers = {
+            text: () => this._updateTextNode(element, newNode),
+            inlineCode: () => element.textContent = newNode.value,
+            code: () => this._updateCodeBlock(element, newNode, oldNode),
+            heading: () => this._updateHeadingNode(element, newNode, oldNode),
+            link: () => this._updateLinkNode(element, newNode, oldNode),
+            list: () => this._updateListNode(element, newNode, oldNode),
+            html: () => this._updateHtmlNode(element, newNode),
+            default: () => this._updateChildrenInPlace(element, newNode.children, oldNode.children)
+        };
+
+        const handler = updateHandlers[newNode.type] || updateHandlers.default;
+        return handler();
+    }
+
+    _updateTextNode(element, newNode) {
+        element.textContent = newNode.value;
+    }
+
+    _updateHeadingNode(element, newNode, oldNode) {
+        if (newNode.depth !== oldNode.depth) return false;
+        this._updateChildrenInPlace(element, newNode.children, oldNode.children);
+        return true;
+    }
+
+    _updateLinkNode(element, newNode, oldNode) {
+        if (newNode.url !== oldNode.url) {
+            element.href = newNode.url;
+        }
+        this._updateChildrenInPlace(element, newNode.children, oldNode.children);
+        return true;
+    }
+
+    _updateListNode(element, newNode, oldNode) {
+        if (newNode.ordered !== oldNode.ordered) return false;
+        this._updateChildrenInPlace(element, newNode.children, oldNode.children);
+        return true;
+    }
+
+    _updateHtmlNode(element, newNode) {
+        if (newNode.value.includes("<think>")) {
+            const content = newNode.value.replace(/<\/?think>/g, "");
+            const contentDiv = element.querySelector('.think-content');
+            if (contentDiv) {
+                contentDiv.innerHTML = content;
+            }
+        } else {
+            element.innerHTML = newNode.value;
+        }
+        return true;
+    }
+
+    _updateCodeBlock(element, newNode, oldNode) {
+        const codeElement = element.querySelector('pre code');
+        const languageSpan = element.querySelector('.code-language');
+
+        if (codeElement && newNode.value !== oldNode.value) {
+            codeElement.innerHTML = this.highlightCode(newNode.value, newNode.lang);
+        }
+
+        if (languageSpan && newNode.lang !== oldNode.lang) {
+            const language = newNode.lang || "plaintext";
+            languageSpan.textContent = language;
+
+            if (codeElement) {
+                codeElement.className = `hljs language-${this.escapeHtml(language)}`;
+            }
+        }
+    }
+
+    _updateChildrenInPlace(element, newChildren, oldChildren) {
+        if (!newChildren) {
+            element.innerHTML = '';
+            return;
+        }
+
+        const oldChildNodes = Array.from(element.childNodes);
+        const newChildrenCount = newChildren.length;
+
+        for (let i = 0; i < newChildrenCount; i++) {
+            this._updateOrCreateChild(element, newChildren[i], oldChildren?.[i], oldChildNodes[i], i);
+        }
+
+        // Remove excess children
+        for (let i = oldChildNodes.length - 1; i >= newChildrenCount; i--) {
+            if (oldChildNodes[i]) {
+                element.removeChild(oldChildNodes[i]);
+            }
+        }
+    }
+
+    _updateOrCreateChild(element, newChild, oldChild, existingChild, index) {
+        if (newChild.type === 'text') {
+            this._handleTextChild(element, newChild, existingChild);
+        } else {
+            this._handleElementChild(element, newChild, oldChild, existingChild);
+        }
+    }
+
+    _handleTextChild(element, newChild, existingChild) {
+        if (existingChild?.nodeType === Node.TEXT_NODE) {
+            existingChild.textContent = newChild.value;
+        } else {
+            const textNode = document.createTextNode(newChild.value);
+            if (existingChild) {
+                element.replaceChild(textNode, existingChild);
+            } else {
+                element.appendChild(textNode);
+            }
+        }
+    }
+
+    _handleElementChild(element, newChild, oldChild, existingChild) {
+        const canUpdate = existingChild?.nodeType === Node.ELEMENT_NODE &&
+            oldChild && this._canUpdateInPlace(newChild, oldChild);
+
+        if (canUpdate) {
+            this._updateElementInPlace(existingChild, newChild, oldChild);
+        } else {
+            const html = this.createHTMLFromNode(newChild);
+            const newElement = this._createElementFromHTML(html);
+            if (newElement) {
+                if (existingChild) {
+                    element.replaceChild(newElement, existingChild);
+                } else {
+                    element.appendChild(newElement);
+                }
+            }
+        }
+    }
+
+    // Node comparison
+    _nodesEqual(node1, node2) {
+        if (!node1 || !node2 || node1.type !== node2.type) return false;
+
+        const equalityCheckers = {
+            text: () => node1.value === node2.value,
+            inlineCode: () => node1.value === node2.value,
+            html: () => node1.value === node2.value,
+            heading: () => node1.depth === node2.depth && this._childrenEqual(node1.children, node2.children),
+            code: () => node1.value === node2.value && node1.lang === node2.lang,
+            link: () => node1.url === node2.url && this._childrenEqual(node1.children, node2.children),
+            list: () => node1.ordered === node2.ordered && this._childrenEqual(node1.children, node2.children),
+            default: () => this._childrenEqual(node1.children, node2.children)
+        };
+
+        const checker = equalityCheckers[node1.type] || equalityCheckers.default;
+        return checker();
+    }
+
+    _childrenEqual(children1, children2) {
+        if (!children1 && !children2) return true;
+        if (!children1 || !children2 || children1.length !== children2.length) return false;
+        return children1.every((child, index) => this._nodesEqual(child, children2[index]));
+    }
+
+    // HTML generation
+    createHTMLFromNode(node) {
+        if (!node) return '';
+
+        const htmlGenerators = {
+            paragraph: () => `<p>${this.createHTMLFromChildren(node.children)}</p>`,
+            heading: () => `<h${node.depth}>${this.createHTMLFromChildren(node.children)}</h${node.depth}>`,
+            text: () => this.escapeHtml(node.value),
+            strong: () => `<strong>${this.createHTMLFromChildren(node.children)}</strong>`,
+            emphasis: () => `<em>${this.createHTMLFromChildren(node.children)}</em>`,
+            inlineCode: () => `<code class="inline-code">${this.escapeHtml(node.value)}</code>`,
+            code: () => node.lang === "details" ? this.createThinkBlockHTML(node.value) : this.createCodeBlockHTML(node),
+            blockquote: () => `<blockquote>${this.createHTMLFromChildren(node.children)}</blockquote>`,
+            list: () => {
+                const tag = node.ordered ? "ol" : "ul";
+                return `<${tag}>${this.createHTMLFromChildren(node.children)}</${tag}>`;
+            },
+            listItem: () => `<li>${this.createHTMLFromChildren(node.children)}</li>`,
+            link: () => `<a href="${this.escapeHtml(node.url)}">${this.createHTMLFromChildren(node.children)}</a>`,
+            break: () => "<br>",
+            thematicBreak: () => "<hr>",
+            html: () => node.value,
+            table: () => `<table>${this.createHTMLFromChildren(node.children)}</table>`,
+            tableRow: () => `<tr>${this.createHTMLFromChildren(node.children)}</tr>`,
+            tableCell: () => {
+                const isHeader = node.children?.[0]?.type === "strong";
+                const tag = isHeader ? "th" : "td";
+                return `<${tag}>${this.createHTMLFromChildren(node.children)}</${tag}>`;
+            },
+            default: () => node.children ? this.createHTMLFromChildren(node.children) : ''
+        };
+
+        const generator = htmlGenerators[node.type] || htmlGenerators.default;
+        return generator();
+    }
+
+    createHTMLFromChildren(children) {
+        return children?.map(child => this.createHTMLFromNode(child)).join('') || '';
+    }
+
+    createCodeBlockHTML(node) {
+        const language = node.lang || "plaintext";
+        const highlightedCode = this.highlightCode(node.value, node.lang);
+
+        return `
+            <div class="code-block-container">
+                <div class="code-block-header">
+                    <span class="code-language">${this.escapeHtml(language)}</span>
+                    <button class="copy-code-btn">
+                        ${this.copyIcon}<span class="copy-text">Copy</span>
+                    </button>
+                </div>
+                <pre class="code-block"><code class="hljs language-${this.escapeHtml(language)}">${highlightedCode}</code></pre>
+            </div>
+        `;
+    }
+
+    createThinkBlockHTML(content) {
+        return `
+            <details class="think-block">
+                <summary>Thinking process</summary>
+                <div class="think-content">${content}</div>
+            </details>
+        `;
+    }
+
+    // Utility methods
+    escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/[&<>"']/g, match => HTML_ESCAPE_MAP[match]);
+    }
+
+    highlightCode(code, language) {
+        const trimmedCode = code.trim();
+
+        if (language && hljs.getLanguage(language)) {
+            try {
+                return hljs.highlight(trimmedCode, { language }).value;
+            } catch (err) {
+                console.warn("Highlighting failed:", err);
+            }
+        }
+
+        return hljs.highlightAuto(trimmedCode).value;
+    }
+
+    async copyCode(button) {
+        try {
+            const codeContainer = button.closest('.code-block-container');
+            const codeElement = codeContainer?.querySelector('pre code');
+
+            if (!codeElement) return;
+
+            await navigator.clipboard.writeText(codeElement.textContent);
+            this._showCopyFeedback(button, "Copied!");
+        } catch {
+            this._showCopyFeedback(button, null, true);
+        }
+    }
+
+    _showCopyFeedback(button, message, isError = false) {
+        const textSpan = button.querySelector(".copy-text");
+
+        if (isError) {
+            button.classList.add("copy-error");
+            setTimeout(() => button.classList.remove("copy-error"), 2000);
+            return;
+        }
+
+        textSpan.textContent = message;
+        button.classList.add("copied");
+        setTimeout(() => {
+            textSpan.textContent = "Copy";
+            button.classList.remove("copied");
+        }, 2000);
     }
 }
 
