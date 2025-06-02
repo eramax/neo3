@@ -66,7 +66,7 @@ export class ChatApp {
     async switchProvider(providerId) {
         const providers = this.getProviders();
         const providerConfig = providers[providerId];
-        
+
         if (providerConfig) {
             this.saveProvider(providerId);
             this.initialized = false;
