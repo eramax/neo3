@@ -185,10 +185,10 @@ export class ChatPage extends LitElement {
         } catch (error) {
             this.newModelError = error.message;
         }
-    } selectProvider(providerId) {
+    } async selectProvider(providerId) {
         this.selectedProvider = providerId;
-        this.selectedModel = null; // Clear selected model when switching providers
-        this.app.saveProvider(providerId);
+        this.selectedModel = null;
+        await this.app.switchProvider(providerId);
         this.loadModels(providerId);
     } async saveProviderConfig(providerId, config) {
         await this.app.saveProviderConfig(providerId, config);
@@ -207,7 +207,8 @@ export class ChatPage extends LitElement {
                         <button class="toggle-sidebar-btn" @click=${this.toggleSidebar}>
                             ${this.sidebarCollapsed ? "☰" : "✕"}
                         </button>
-                        <h1 class="chat-title">${this.selectedChat}</h1>                        <model-selector
+                        <h1 class="chat-title">${this.selectedChat}</h1>
+                        <model-selector
                             .selectedModel=${this.selectedModel} .selectedProvider=${this.selectedProvider}
                             .providers=${this.providers} .showModelSelector=${this.showModelSelector}
                             .models=${this.models} .modelsLoading=${this.modelsLoading} .modelsError=${this.modelsError}
@@ -216,7 +217,8 @@ export class ChatPage extends LitElement {
                             .newModelError=${this.newModelError} .onToggleModelSelector=${() => this.toggleModelSelector()}
                             .onSelectModel=${modelId => this.selectModel(modelId)} .onSelectProvider=${providerId => this.selectProvider(providerId)}
                             .onSaveProviderConfig=${(providerId, config) => this.saveProviderConfig(providerId, config)}
-                            .onSaveNewModel=${modelUrl => this.saveNewModel(modelUrl)}                            .onLoadModels=${(providerId) => this.loadModels(providerId)}>
+                            .onSaveNewModel=${modelUrl => this.saveNewModel(modelUrl)}
+                            .onLoadModels=${(providerId) => this.loadModels(providerId)}>
                         </model-selector>
                     </div>
                     <div class="messages">

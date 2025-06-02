@@ -63,6 +63,18 @@ export class ChatApp {
         this.initialized = true;
     }
 
+    async switchProvider(providerId) {
+        const providers = this.getProviders();
+        const providerConfig = providers[providerId];
+        
+        if (providerConfig) {
+            this.saveProvider(providerId);
+            this.initialized = false;
+            this.initPromise = this.initWorker();
+            await this.initPromise;
+        }
+    }
+
     async ensureInitialized() {
         if (!this.initialized) {
             await this.initPromise;

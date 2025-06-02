@@ -187,3 +187,9 @@
 - **Changed:** Consolidated provider definitions and removed duplicated model mapping code
 - **Reason:** Reduced code duplication and improved maintainability across core and worker files
 - **Impact:** Single source of truth for provider configs, cleaner model loading logic
+
+## [2024-12-19] - Fix Provider Switching for Chat
+
+- **Changed:** Added proper worker reinitialization when switching providers and fixed syntax error
+- **Reason:** Chat was using wrong provider URL when model selection changed providers  
+- **Impact:** Chat now correctly uses selected provider configuration for streaming
