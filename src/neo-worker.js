@@ -72,28 +72,67 @@ const pullModel = async (requestId, { modelUrl }) => {
 };
 
 const loadModels = async () => {
-    const { models } = await ollama.list();
-    return models.map(model => {
-        const baseName = model.name.split(':')[0];
-        let displayName = baseName;
-        let link = `https://ollama.com/library/${displayName}`;
+    const allModels = [];
 
-        if (baseName.startsWith('hf.co/')) {
-            const hfPath = baseName.substring(6);
-            displayName = hfPath.split('/').pop().replace(/-GGUF$/i, '');
-            link = `https://huggingface.co/${hfPath}`;
-        }
+    // Load Ollama models if available
+    try {
+        const { models } = await ollama.list();
+        const ollamaModels = models.map(model => {
+            const baseName = model.name.split(':')[0];
+            let displayName = baseName;
+            let link = `https://ollama.com/library/${displayName}`;
 
-        return {
-            id: model.name,
-            name: displayName,
-            arch: model.details?.family || 'Unknown',
-            size: formatSize(model.size),
-            format: model.details?.format?.toUpperCase() || 'Unknown',
-            link,
-            details: model.details || {}
-        };
-    });
+            if (baseName.startsWith('hf.co/')) {
+                const hfPath = baseName.substring(6);
+                displayName = hfPath.split('/').pop().replace(/-GGUF$/i, '');
+                link = `https://huggingface.co/${hfPath}`;
+            }
+
+            return {
+                id: model.name,
+                name: displayName,
+                arch: model.details?.family || 'Unknown',
+                size: formatSize(model.size),
+                format: model.details?.format?.toUpperCase() || 'Unknown',
+                link,
+                details: model.details || {},
+                provider: 'ollama'
+            };
+        });
+        allModels.push(...ollamaModels);
+    } catch (error) {
+        console.log('Ollama not available:', error.message);
+    }
+
+    // Add models for other providers
+    const providerModels = {
+        openai: [
+            { id: 'gpt-4o', name: 'GPT-4o', arch: 'Transformer', size: 'Large', format: 'API', link: 'https://openai.com/gpt-4', provider: 'openai' },
+            { id: 'gpt-4o-mini', name: 'GPT-4o Mini', arch: 'Transformer', size: 'Medium', format: 'API', link: 'https://openai.com/gpt-4', provider: 'openai' },
+            { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', arch: 'Transformer', size: 'Medium', format: 'API', link: 'https://openai.com/gpt-3.5', provider: 'openai' }
+        ],
+        openrouter: [
+            { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', arch: 'Transformer', size: 'Large', format: 'API', link: 'https://anthropic.com/claude', provider: 'openrouter' },
+            { id: 'openai/gpt-4o', name: 'GPT-4o', arch: 'Transformer', size: 'Large', format: 'API', link: 'https://openai.com/gpt-4', provider: 'openrouter' },
+            { id: 'meta-llama/llama-3.1-70b-instruct', name: 'Llama 3.1 70B', arch: 'Llama', size: 'XLarge', format: 'API', link: 'https://llama.meta.com', provider: 'openrouter' }
+        ],
+        deepseek: [
+            { id: 'deepseek-chat', name: 'DeepSeek Chat', arch: 'Transformer', size: 'Large', format: 'API', link: 'https://deepseek.com', provider: 'deepseek' },
+            { id: 'deepseek-coder', name: 'DeepSeek Coder', arch: 'Transformer', size: 'Large', format: 'API', link: 'https://deepseek.com', provider: 'deepseek' }
+        ],
+        anthropic: [
+            { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', arch: 'Transformer', size: 'Large', format: 'API', link: 'https://anthropic.com/claude', provider: 'anthropic' },
+            { id: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', arch: 'Transformer', size: 'Medium', format: 'API', link: 'https://anthropic.com/claude', provider: 'anthropic' }
+        ],
+        google: [
+            { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', arch: 'Gemini', size: 'Large', format: 'API', link: 'https://deepmind.google/technologies/gemini', provider: 'google' },
+            { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', arch: 'Gemini', size: 'Medium', format: 'API', link: 'https://deepmind.google/technologies/gemini', provider: 'google' }
+        ]
+    };
+    // Add all provider models
+    Object.values(providerModels).forEach(models => allModels.push(...models));
+
+    return allModels;
 };
 
 const formatSize = bytes => {

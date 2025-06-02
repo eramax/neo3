@@ -85,3 +85,17 @@
 - **Changed:** Removed style injection from ChatPage component and added direct SCSS import to HTML
 - **Reason:** User requested direct style import in HTML instead of component-level injection
 - **Impact:** Cleaner component code, styles loaded once globally, better performance and simpler architecture
+
+## [June 3, 2025] - Accordion Interface Conversion
+
+- **Changed:** Converted model selector from tab interface to accordion interface with collapsible provider sections
+- **Reason:** Improve UX by allowing users to browse models from different AI providers in an expandable/collapsible format that saves vertical space
+- **Impact:**
+  - Replaced tab-based navigation with accordion items that can expand/collapse independently
+  - Added `expandedProviders` Set to track which provider sections are open
+  - Implemented `toggleProvider()` method for expand/collapse behavior with smooth animations
+  - Updated `selectProvider()` to auto-expand sections when selecting a provider
+  - Added chevron indicators with rotation animations for visual feedback
+  - Enhanced accordion styling with hover effects, selection states, and smooth transitions
+  - Maintained all existing functionality while improving space efficiency and visual organization
+  - Fixed SCSS syntax errors during implementation for successful build process

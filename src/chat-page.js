@@ -55,15 +55,21 @@ export class ChatPage extends LitElement {
         this.modelsError = null;
         try {
             this.models = await this.app.loadModels();
-            const storedModel = this.app.getStoredModel();
-            const firstModel = this.models[0]?.id;
 
-            // Auto-select stored model or first available model
-            if (storedModel && this.models.find(m => m.id === storedModel)) {
+            // Filter models for current provider
+            const providerModels = this.models.filter(m => m.provider === this.selectedProvider);
+
+            const storedModel = this.app.getStoredModel();
+            const firstProviderModel = providerModels[0]?.id;
+
+            // Auto-select stored model if it exists for current provider, otherwise select first available
+            if (storedModel && providerModels.find(m => m.id === storedModel)) {
                 this.selectedModel = storedModel;
-            } else if (firstModel) {
-                this.selectedModel = firstModel;
-                this.app.saveModel(firstModel); // Save the auto-selected model
+            } else if (firstProviderModel) {
+                this.selectedModel = firstProviderModel;
+                this.app.saveModel(firstProviderModel);
+            } else {
+                this.selectedModel = null;
             }
         } catch (err) {
             console.error('Failed to load models:', err);
@@ -170,10 +176,9 @@ export class ChatPage extends LitElement {
         } catch (error) {
             this.newModelError = error.message;
         }
-    }
-
-    selectProvider(providerId) {
+    } selectProvider(providerId) {
         this.selectedProvider = providerId;
+        this.selectedModel = null; // Clear selected model when switching providers
         this.app.saveProvider(providerId);
         this.loadModels();
     }

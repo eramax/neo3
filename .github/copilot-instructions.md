@@ -10,6 +10,7 @@
 - Always add your styles to app.scss
 - Use ES6+ features for modern JavaScript practices
 - use only dark mode colors for UI elements
+- always use bun and not npm
 
 ## JavaScript Specific Rules
 

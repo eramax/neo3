@@ -105,7 +105,8 @@ export class ChatApp {
         }
     } async loadModels() {
         await this.ensureInitialized();
-        return this.sendWorkerMessage('loadModels');
+        const models = await this.sendWorkerMessage('loadModels');
+        return models;
     } async pullModel(modelUrl, onProgress) {
         await this.ensureInitialized();
         return new Promise((resolve, reject) => {
