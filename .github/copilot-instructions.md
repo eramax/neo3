@@ -6,6 +6,9 @@
 - Prioritize concise, minimal code - fewer lines are better
 - Optimize for performance in all implementations
 - Always update backlog.md in root directory with any changes made
+- No shadow components
+- Always add your styles to app.scss
+- Use ES6+ features for modern JavaScript practices
 
 ## JavaScript Specific Rules
 

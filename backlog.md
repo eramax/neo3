@@ -14,11 +14,17 @@
   - Improved memory usage with cached elements and reduced state mutations
   - Better code readability with consistent patterns and modern JavaScript features
 
-## [2024] - Code Refactoring
+## [2024] - Code Refactor
 
 - **Changed:** Extracted ollama.chat call into separate chatWithOllama function
 - **Reason:** Improve code modularity and reusability for chat functionality
 - **Impact:** Better code organization, easier testing and maintenance
+
+## [2024] - Code Copy Refactor
+
+- **Changed:** Updated MDRender.js to use global copyCodeToClipboard function
+- **Reason:** Consolidate copy functionality to single implementation in main.js
+- **Impact:** Reduced code duplication, improved maintainability, consistent copy behavior across app
 
 ## [June 2, 2025] - Final Code Splitting & Bundle Optimization
 
@@ -61,3 +67,9 @@
   - Maintained copy functionality and think block processing
   - File size increased from 150 to 470 lines but with superior markdown parsing accuracy
   - Better performance for incremental updates during streaming content
+
+## [2024-12-19] - Move SCSS Import to HTML
+
+- **Changed:** Removed style injection from ChatPage component and added direct SCSS import to HTML
+- **Reason:** User requested direct style import in HTML instead of component-level injection
+- **Impact:** Cleaner component code, styles loaded once globally, better performance and simpler architecture

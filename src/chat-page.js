@@ -1,12 +1,14 @@
-import { LitElement, html, unsafeCSS } from 'lit';
+import { LitElement, html } from 'lit';
 import { ChatApp } from "./core.js";
 import "./MDRender.js";
 import "./sidebar.js";
 import "./model-selector.js";
-import styles from './app.scss?inline';
 
 export class ChatPage extends LitElement {
-    static styles = unsafeCSS(styles);
+    createRenderRoot() {
+        return this;
+    }
+
     static properties = {
         selectedChat: { state: true }, message: { state: true }, selectedModel: { state: true },
         showModelSelector: { state: true }, sidebarCollapsed: { state: true }, models: { state: true },
@@ -83,7 +85,7 @@ export class ChatPage extends LitElement {
     }
 
     scrollToBottom() {
-        const container = this.shadowRoot?.querySelector('.messages');
+        const container = this.querySelector('.messages'); // Changed from shadowRoot to this
         if (container) requestAnimationFrame(() => container.scrollTop = container.scrollHeight);
     }
 

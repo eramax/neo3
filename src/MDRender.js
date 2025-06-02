@@ -73,7 +73,11 @@ export class IncrementalMarkdown extends HTMLElement {
         this._container.addEventListener('click', (event) => {
             const copyButton = event.target.closest('.copy-code-btn');
             if (copyButton) {
-                this.copyCode(copyButton);
+                const codeContainer = copyButton.closest('.code-block-container');
+                const codeElement = codeContainer?.querySelector('pre code');
+                if (codeElement && window.copyCodeToClipboard) {
+                    window.copyCodeToClipboard(copyButton, codeElement.textContent);
+                }
             }
         });
     }
@@ -397,7 +401,7 @@ export class IncrementalMarkdown extends HTMLElement {
                 <div class="code-block-header">
                     <span class="code-language">${this.escapeHtml(language)}</span>
                     <button class="copy-code-btn">
-                        ${this.copyIcon}<span class="copy-text">Copy</span>
+                        ${this.copyIcon}<span class="copy-text"/>
                     </button>
                 </div>
                 <pre class="code-block"><code class="hljs language-${this.escapeHtml(language)}">${highlightedCode}</code></pre>
@@ -432,37 +436,6 @@ export class IncrementalMarkdown extends HTMLElement {
         }
 
         return hljs.highlightAuto(trimmedCode).value;
-    }
-
-    async copyCode(button) {
-        try {
-            const codeContainer = button.closest('.code-block-container');
-            const codeElement = codeContainer?.querySelector('pre code');
-
-            if (!codeElement) return;
-
-            await navigator.clipboard.writeText(codeElement.textContent);
-            this._showCopyFeedback(button, "Copied!");
-        } catch {
-            this._showCopyFeedback(button, null, true);
-        }
-    }
-
-    _showCopyFeedback(button, message, isError = false) {
-        const textSpan = button.querySelector(".copy-text");
-
-        if (isError) {
-            button.classList.add("copy-error");
-            setTimeout(() => button.classList.remove("copy-error"), 2000);
-            return;
-        }
-
-        textSpan.textContent = message;
-        button.classList.add("copied");
-        setTimeout(() => {
-            textSpan.textContent = "Copy";
-            button.classList.remove("copied");
-        }, 2000);
     }
 }
 
