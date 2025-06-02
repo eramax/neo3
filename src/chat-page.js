@@ -52,43 +52,32 @@ export class ChatPage extends LitElement {
         updateFromUrl();
     } async loadModels(providerId = null) {
         const targetProvider = providerId || this.selectedProvider;
+        const targetConfig = this.providers[targetProvider];
         this.modelsLoading = true;
         this.modelsError = null;
         try {
-            const allModels = await this.app.loadModels(targetProvider);
+            const newModels = await this.app.loadModels(targetProvider, targetConfig);
 
-            // If no provider specified, load all models (for backwards compatibility)
-            if (!providerId) {
-                this.models = allModels;
-            } else {
-                // Only add models for the target provider if not already loaded
-                const existingProviders = new Set(this.models.map(m => m.provider));
-                if (!existingProviders.has(targetProvider)) {
-                    this.models = [...this.models, ...allModels];
+            this.models = this.models.filter(m => m.provider !== targetProvider);
+            this.models = [...this.models, ...newModels];
+
+            if (targetProvider === this.selectedProvider) {
+                const providerModels = newModels;
+                const storedModel = this.app.getStoredModel();
+                const firstProviderModel = providerModels[0]?.id;
+
+                if (storedModel && providerModels.find(m => m.id === storedModel)) {
+                    this.selectedModel = storedModel;
+                } else if (firstProviderModel) {
+                    this.selectedModel = firstProviderModel;
+                    this.app.saveModel(firstProviderModel);
                 }
-            }
-
-            // Filter models for current provider for auto-selection
-            const providerModels = this.models.filter(m => m.provider === this.selectedProvider);
-
-            const storedModel = this.app.getStoredModel();
-            const firstProviderModel = providerModels[0]?.id;
-
-            // Auto-select stored model if it exists for current provider, otherwise select first available
-            if (storedModel && providerModels.find(m => m.id === storedModel)) {
-                this.selectedModel = storedModel;
-            } else if (firstProviderModel && this.selectedProvider === targetProvider) {
-                this.selectedModel = firstProviderModel;
-                this.app.saveModel(firstProviderModel);
-            } else if (!providerId) {
-                this.selectedModel = null;
             }
         } catch (err) {
             console.error('Failed to load models:', err);
             this.modelsError = err.message || `Failed to connect to ${this.providers[targetProvider]?.name || 'server'}`;
         } finally {
             this.modelsLoading = false;
-            // Notify model selector that loading is complete for this provider
             const modelSelector = this.querySelector('model-selector');
             if (modelSelector && targetProvider) {
                 modelSelector.onModelsLoaded(targetProvider);

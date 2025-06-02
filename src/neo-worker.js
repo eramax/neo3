@@ -71,13 +71,20 @@ const pullModel = async (requestId, { modelUrl }) => {
     }
 };
 
-const loadModels = async (specificProvider = null) => {
+const loadModels = async (specificProvider = null, specificConfig = null) => {
     const allModels = [];
 
     // Load Ollama models if available and requested
     if (!specificProvider || specificProvider === 'ollama') {
         try {
-            const { models } = await ollama.list();
+            // Use specific config if provided, otherwise use current ollama instance
+            let ollamaInstance = ollama;
+            if (specificConfig && specificProvider === 'ollama') {
+                const OllamaClass = await loadOllama();
+                ollamaInstance = new OllamaClass({ host: specificConfig.url });
+            }
+
+            const { models } = await ollamaInstance.list();
             const ollamaModels = models.map(model => {
                 const baseName = model.name.split(':')[0];
                 let displayName = baseName;
@@ -199,7 +206,7 @@ self.onmessage = async ({ data: { type, id, data } }) => {
                 await initOllama(data.host, data.provider, data.apiKey);
                 postMessage({ type: 'init', id, success: true });
                 break; case 'loadModels':
-                postMessage({ type: 'loadModels', id, data: await loadModels(data.provider) });
+                postMessage({ type: 'loadModels', id, data: await loadModels(data.provider, data.providerConfig) });
                 break;
             case 'streamChat':
                 await streamChat(id, data);

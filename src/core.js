@@ -103,9 +103,12 @@ export class ChatApp {
                 detail: { chatId, newTitle: title }
             }));
         }
-    } async loadModels(provider = null) {
+    } async loadModels(provider = null, providerConfig = null) {
         await this.ensureInitialized();
-        const models = await this.sendWorkerMessage('loadModels', { provider });
+        const models = await this.sendWorkerMessage('loadModels', {
+            provider,
+            providerConfig
+        });
         return models;
     } async pullModel(modelUrl, onProgress) {
         await this.ensureInitialized();

@@ -163,3 +163,15 @@
   - Maintained proper expandedProviders Set management for UI state
   - Ensured all event handlers and rendering methods work correctly
   - Application now starts without errors and lazy loading works as intended
+
+## [2024-12-19] - Single Provider Accordion
+
+- **Changed:** Modified model selector to show only one expanded provider at a time
+- **Reason:** Improved UX by preventing multiple expanded providers and confusion about which provider's models are shown
+- **Impact:** Cleaner interface, better model organization, reduced visual clutter
+
+## [2024-12-19] - Provider-Specific Model Loading Fix
+
+- **Changed:** Fixed worker loadModels to use provider-specific configuration instead of initialized instance
+- **Reason:** Models were loading with wrong provider URL when expanding different providers  
+- **Impact:** Each provider now correctly loads models using its own configuration URL

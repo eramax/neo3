@@ -50,15 +50,14 @@ export class ModelSelector extends LitElement {
     getModelsForProvider(providerId) {
         return (this.models || []).filter(model => model.provider === providerId);
     } toggleProvider(providerId) {
-        if (this.expandedProviders.has(providerId)) {
-            this.expandedProviders.delete(providerId);
-        } else {
-            this.expandedProviders.add(providerId);
-            // Load models for this provider when expanded (lazy loading)
-            if (!this.getModelsForProvider(providerId).length) {
-                this.loadingProviders.add(providerId);
-                this.onLoadModels?.(providerId);
-            }
+        // Close all other providers and open only the clicked one
+        this.expandedProviders.clear();
+        this.expandedProviders.add(providerId);
+
+        // Load models for this provider when expanded (lazy loading)
+        if (!this.getModelsForProvider(providerId).length) {
+            this.loadingProviders.add(providerId);
+            this.onLoadModels?.(providerId);
         }
         this.requestUpdate();
     } selectModel(modelId, providerId) {
