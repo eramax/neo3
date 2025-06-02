@@ -1,3 +1,28 @@
+## [June 3, 2025] - Provider-Specific Model Loading States
+
+- **Changed:** Enhanced model selector to show loading state for specific provider being expanded
+- **Reason:** User wanted models to load when opening provider accordion and show loading for that specific provider
+- **Impact:**
+  - Added `loadingProviders` Set to track which providers are currently loading models
+  - Modified loading display to show spinner for specific provider being loaded, not just selected provider
+  - Updated `toggleProvider()` to only load models if provider has no models yet
+  - Added `onModelsLoaded()` method to clear loading state when provider models finish loading
+  - Improved retry button to work for any provider and show loading state
+  - Better UX with accurate loading indicators per provider
+
+## [June 3, 2025] - Lazy Model Loading for Providers
+
+- **Changed:** Implemented lazy loading for provider models to improve performance
+- **Reason:** User requested models only load when provider is opened, not on page load
+- **Impact:**
+  - Modified `toggleProvider()` to trigger model loading when expanding a provider
+  - Updated `loadModels()` to accept provider parameter for targeted loading
+  - Changed initial page load to only load selected provider models
+  - Added provider-specific model loading in worker with `loadModels(provider)` parameter
+  - Optimized model loading by avoiding unnecessary API calls for unopened providers
+  - Improved app startup performance by reducing initial network requests
+  - Maintained backward compatibility for existing model loading patterns
+
 ## [June 3, 2025] - Enhanced Model Selector UX
 
 - **Changed:** Improved model selector behavior for better user experience
@@ -126,3 +151,15 @@
   - Model rows now take full width for better space utilization
   - Added 70vh max height with overflow scroll for many models
   - Improved responsive behavior and visual hierarchy
+
+## [January 6, 2025] - Fixed Corrupted Model Selector
+
+- **Changed:** Restored corrupted model-selector.js file with proper lazy loading implementation
+- **Reason:** File became corrupted during previous edits with duplicate class declarations and syntax errors
+- **Impact:**
+  - Completely rewrote model-selector.js with clean implementation
+  - Preserved all lazy loading functionality including `toggleProvider()` with model loading trigger
+  - Fixed `updated()` lifecycle method to properly expand selected provider on initialization
+  - Maintained proper expandedProviders Set management for UI state
+  - Ensured all event handlers and rendering methods work correctly
+  - Application now starts without errors and lazy loading works as intended

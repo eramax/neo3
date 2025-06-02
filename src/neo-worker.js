@@ -71,37 +71,39 @@ const pullModel = async (requestId, { modelUrl }) => {
     }
 };
 
-const loadModels = async () => {
+const loadModels = async (specificProvider = null) => {
     const allModels = [];
 
-    // Load Ollama models if available
-    try {
-        const { models } = await ollama.list();
-        const ollamaModels = models.map(model => {
-            const baseName = model.name.split(':')[0];
-            let displayName = baseName;
-            let link = `https://ollama.com/library/${displayName}`;
+    // Load Ollama models if available and requested
+    if (!specificProvider || specificProvider === 'ollama') {
+        try {
+            const { models } = await ollama.list();
+            const ollamaModels = models.map(model => {
+                const baseName = model.name.split(':')[0];
+                let displayName = baseName;
+                let link = `https://ollama.com/library/${displayName}`;
 
-            if (baseName.startsWith('hf.co/')) {
-                const hfPath = baseName.substring(6);
-                displayName = hfPath.split('/').pop().replace(/-GGUF$/i, '');
-                link = `https://huggingface.co/${hfPath}`;
-            }
+                if (baseName.startsWith('hf.co/')) {
+                    const hfPath = baseName.substring(6);
+                    displayName = hfPath.split('/').pop().replace(/-GGUF$/i, '');
+                    link = `https://huggingface.co/${hfPath}`;
+                }
 
-            return {
-                id: model.name,
-                name: displayName,
-                arch: model.details?.family || 'Unknown',
-                size: formatSize(model.size),
-                format: model.details?.format?.toUpperCase() || 'Unknown',
-                link,
-                details: model.details || {},
-                provider: 'ollama'
-            };
-        });
-        allModels.push(...ollamaModels);
-    } catch (error) {
-        console.log('Ollama not available:', error.message);
+                return {
+                    id: model.name,
+                    name: displayName,
+                    arch: model.details?.family || 'Unknown',
+                    size: formatSize(model.size),
+                    format: model.details?.format?.toUpperCase() || 'Unknown',
+                    link,
+                    details: model.details || {},
+                    provider: 'ollama'
+                };
+            });
+            allModels.push(...ollamaModels);
+        } catch (error) {
+            console.log('Ollama not available:', error.message);
+        }
     }
 
     // Add models for other providers
@@ -129,8 +131,14 @@ const loadModels = async () => {
             { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', arch: 'Gemini', size: 'Medium', format: 'API', link: 'https://deepmind.google/technologies/gemini', provider: 'google' }
         ]
     };
-    // Add all provider models
-    Object.values(providerModels).forEach(models => allModels.push(...models));
+
+    // Add provider models based on request
+    if (specificProvider && providerModels[specificProvider]) {
+        allModels.push(...providerModels[specificProvider]);
+    } else if (!specificProvider) {
+        // Add all provider models if no specific provider requested
+        Object.values(providerModels).forEach(models => allModels.push(...models));
+    }
 
     return allModels;
 };
@@ -190,9 +198,8 @@ self.onmessage = async ({ data: { type, id, data } }) => {
             case 'init':
                 await initOllama(data.host, data.provider, data.apiKey);
                 postMessage({ type: 'init', id, success: true });
-                break;
-            case 'loadModels':
-                postMessage({ type: 'loadModels', id, data: await loadModels() });
+                break; case 'loadModels':
+                postMessage({ type: 'loadModels', id, data: await loadModels(data.provider) });
                 break;
             case 'streamChat':
                 await streamChat(id, data);

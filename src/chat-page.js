@@ -34,8 +34,8 @@ export class ChatPage extends LitElement {
 
     loadChats() { this.chats = this.app.getChats(); } connectedCallback() {
         super.connectedCallback();
-        // Wait a moment for component to be ready, then load models
-        setTimeout(() => this.loadModels(), 100);
+        // Only load models for the selected provider on initial load
+        setTimeout(() => this.loadModels(this.selectedProvider), 100);
         const updateFromUrl = () => {
             const chatId = window.location.pathname.substring(1);
             if (chatId !== this.currentChatId) this.updateCurrentChat(chatId);
@@ -50,13 +50,25 @@ export class ChatPage extends LitElement {
             }
         });
         updateFromUrl();
-    } async loadModels() {
+    } async loadModels(providerId = null) {
+        const targetProvider = providerId || this.selectedProvider;
         this.modelsLoading = true;
         this.modelsError = null;
         try {
-            this.models = await this.app.loadModels();
+            const allModels = await this.app.loadModels(targetProvider);
 
-            // Filter models for current provider
+            // If no provider specified, load all models (for backwards compatibility)
+            if (!providerId) {
+                this.models = allModels;
+            } else {
+                // Only add models for the target provider if not already loaded
+                const existingProviders = new Set(this.models.map(m => m.provider));
+                if (!existingProviders.has(targetProvider)) {
+                    this.models = [...this.models, ...allModels];
+                }
+            }
+
+            // Filter models for current provider for auto-selection
             const providerModels = this.models.filter(m => m.provider === this.selectedProvider);
 
             const storedModel = this.app.getStoredModel();
@@ -65,17 +77,22 @@ export class ChatPage extends LitElement {
             // Auto-select stored model if it exists for current provider, otherwise select first available
             if (storedModel && providerModels.find(m => m.id === storedModel)) {
                 this.selectedModel = storedModel;
-            } else if (firstProviderModel) {
+            } else if (firstProviderModel && this.selectedProvider === targetProvider) {
                 this.selectedModel = firstProviderModel;
                 this.app.saveModel(firstProviderModel);
-            } else {
+            } else if (!providerId) {
                 this.selectedModel = null;
             }
         } catch (err) {
             console.error('Failed to load models:', err);
-            this.modelsError = err.message || `Failed to connect to ${this.providers[this.selectedProvider]?.name || 'server'}`;
+            this.modelsError = err.message || `Failed to connect to ${this.providers[targetProvider]?.name || 'server'}`;
         } finally {
             this.modelsLoading = false;
+            // Notify model selector that loading is complete for this provider
+            const modelSelector = this.querySelector('model-selector');
+            if (modelSelector && targetProvider) {
+                modelSelector.onModelsLoaded(targetProvider);
+            }
         }
     }
 
@@ -174,9 +191,8 @@ export class ChatPage extends LitElement {
             await this.app.pullModel(modelUrl, progress => {
                 this.newModelProgress = progress;
                 if (progress.error) this.newModelError = progress.error;
-            });
-            Object.assign(this, { newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null });
-            this.loadModels();
+            }); Object.assign(this, { newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null });
+            this.loadModels('ollama'); // Only reload Ollama models after pulling
         } catch (error) {
             this.newModelError = error.message;
         }
@@ -184,12 +200,10 @@ export class ChatPage extends LitElement {
         this.selectedProvider = providerId;
         this.selectedModel = null; // Clear selected model when switching providers
         this.app.saveProvider(providerId);
-        this.loadModels();
-    }
-
-    async saveProviderConfig(providerId, config) {
+        this.loadModels(providerId);
+    } async saveProviderConfig(providerId, config) {
         await this.app.saveProviderConfig(providerId, config);
-        this.loadModels();
+        this.loadModels(providerId);
     }
 
     render() {
@@ -213,7 +227,7 @@ export class ChatPage extends LitElement {
                             .newModelError=${this.newModelError} .onToggleModelSelector=${() => this.toggleModelSelector()}
                             .onSelectModel=${modelId => this.selectModel(modelId)} .onSelectProvider=${providerId => this.selectProvider(providerId)}
                             .onSaveProviderConfig=${(providerId, config) => this.saveProviderConfig(providerId, config)}
-                            .onSaveNewModel=${modelUrl => this.saveNewModel(modelUrl)} .onLoadModels=${() => this.loadModels()}>
+                            .onSaveNewModel=${modelUrl => this.saveNewModel(modelUrl)}                            .onLoadModels=${(providerId) => this.loadModels(providerId)}>
                         </model-selector>
                     </div>
                     <div class="messages">

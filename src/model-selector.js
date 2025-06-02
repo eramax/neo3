@@ -7,7 +7,7 @@ export class ModelSelector extends LitElement {
         providers: { type: Object }, showProviderConfig: { type: Boolean }, editingProvider: { type: String },
         tempConfig: { type: Object }, connectionStatus: { type: String }, newModelMode: { type: Boolean },
         newModelUrl: { type: String }, newModelProgress: { type: Object }, newModelError: { type: String },
-        expandedProviders: { type: Set }, onToggleModelSelector: { type: Function }, onSelectModel: { type: Function },
+        expandedProviders: { type: Set }, loadingProviders: { type: Set }, onToggleModelSelector: { type: Function }, onSelectModel: { type: Function },
         onSelectProvider: { type: Function }, onSaveProviderConfig: { type: Function }, onSaveNewModel: { type: Function },
         onLoadModels: { type: Function }
     };
@@ -26,26 +26,50 @@ export class ModelSelector extends LitElement {
             modelsLoading: true, modelsError: null, providers: { ...ModelSelector.defaultProviders },
             showProviderConfig: false, editingProvider: null, tempConfig: {}, connectionStatus: "checking",
             newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null,
-            expandedProviders: new Set(['ollama']) // Start with Ollama expanded
+            expandedProviders: new Set(), loadingProviders: new Set()
         });
-    } createRenderRoot() { return this; } get currentModel() { return this.filteredModels.find(m => m.id === this.selectedModel) || null; }
-    get currentProvider() { return this.providers[this.selectedProvider] || this.providers.ollama; } get filteredModels() {
+    }
+
+    createRenderRoot() { return this; }
+
+    updated(changedProperties) {
+        super.updated(changedProperties);
+        if (changedProperties.has('selectedProvider')) {
+            this.expandedProviders = new Set([this.selectedProvider]);
+        }
+    }
+
+    get currentModel() { return this.filteredModels.find(m => m.id === this.selectedModel) || null; }
+
+    get currentProvider() { return this.providers[this.selectedProvider] || this.providers.ollama; }
+
+    get filteredModels() {
         return (this.models || []);
     }
 
     getModelsForProvider(providerId) {
         return (this.models || []).filter(model => model.provider === providerId);
     } toggleProvider(providerId) {
-        // Close all other providers and open only the selected one
-        this.expandedProviders = new Set([providerId]);
+        if (this.expandedProviders.has(providerId)) {
+            this.expandedProviders.delete(providerId);
+        } else {
+            this.expandedProviders.add(providerId);
+            // Load models for this provider when expanded (lazy loading)
+            if (!this.getModelsForProvider(providerId).length) {
+                this.loadingProviders.add(providerId);
+                this.onLoadModels?.(providerId);
+            }
+        }
         this.requestUpdate();
-    }
-
-    selectModel(modelId, providerId) {
-        // Switch provider and select model when clicking on a specific model
+    } selectModel(modelId, providerId) {
         this.selectedProvider = providerId;
         this.onSelectProvider?.(providerId);
         this.onSelectModel?.(modelId);
+    }
+
+    onModelsLoaded(providerId) {
+        this.loadingProviders.delete(providerId);
+        this.requestUpdate();
     }
 
     startProviderEdit(providerId) {
@@ -93,14 +117,17 @@ export class ModelSelector extends LitElement {
                 </div>
             </div>
         `;
-    } render() {
+    }
+
+    render() {
         return html`
             <div class="model-selector">
                 <button class="model-trigger" @click=${() => this.onToggleModelSelector?.()} ?disabled=${this.modelsLoading}>
                     <span class="provider-badge">${this.currentProvider.name}</span>
                     <span class="model-name">${this.currentModel?.name || "Select Model"}</span>
                     <span class="chevron ${this.showModelSelector ? 'open' : ''}">▼</span>
-                </button>${this.showModelSelector ? html`
+                </button>
+                ${this.showModelSelector ? html`
                     <div class="model-dropdown">
                         <div class="provider-accordion">
                             ${Object.entries(this.providers).map(([id, provider]) => html`
@@ -119,7 +146,7 @@ export class ModelSelector extends LitElement {
                                         </div>
                                     </div>                                    ${this.expandedProviders.has(id) ? html`
                                         <div class="accordion-content">
-                                            ${this.modelsLoading && this.selectedProvider === id ? html`
+                                            ${this.loadingProviders.has(id) ? html`
                                                 <div class="model-loading">
                                                     <div class="loading-spinner"></div>
                                                     <span>Loading models...</span>
@@ -186,12 +213,14 @@ export class ModelSelector extends LitElement {
                                                         `}
                                                     ` : ''}
                                                 </div>
-                                            ` : html`
-                                                <div class="no-connection">
+                                            ` : html`                                                <div class="no-connection">
                                                     <div class="no-connection-icon">🔌</div>
                                                     <span>No models available for ${provider.name}</span>
-                                                    ${id === this.selectedProvider ? html`
-                                                        <button @click=${() => this.onLoadModels?.()} class="retry-btn-compact">↻ Retry</button>
+                                                    ${!this.loadingProviders.has(id) ? html`
+                                                        <button @click=${() => {
+                            this.loadingProviders.add(id);
+                            this.onLoadModels?.(id);
+                        }} class="retry-btn-compact">↻ Retry</button>
                                                     ` : ''}
                                                 </div>
                                             `}
