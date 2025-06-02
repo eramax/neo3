@@ -9,6 +9,7 @@
 - No shadow components
 - Always add your styles to app.scss
 - Use ES6+ features for modern JavaScript practices
+- use only dark mode colors for UI elements
 
 ## JavaScript Specific Rules
 

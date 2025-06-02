@@ -7,25 +7,26 @@ import "./model-selector.js";
 export class ChatPage extends LitElement {
     createRenderRoot() {
         return this;
-    }
-
-    static properties = {
+    } static properties = {
         selectedChat: { state: true }, message: { state: true }, selectedModel: { state: true },
-        showModelSelector: { state: true }, sidebarCollapsed: { state: true }, models: { state: true },
-        modelsLoading: { state: true }, modelsError: { state: true }, ollamaUrl: { state: true },
-        chats: { state: true }, streamingMessage: { state: true }, isStreaming: { state: true },
-        currentChatId: { state: true }, currentMessages: { state: true }, currentChat: { state: true },
-        isNewChat: { state: true }, newModelMode: { state: true }, newModelUrl: { state: true },
-        newModelProgress: { state: true }, newModelError: { state: true }
+        selectedProvider: { state: true }, providers: { state: true }, showModelSelector: { state: true },
+        sidebarCollapsed: { state: true }, models: { state: true }, modelsLoading: { state: true },
+        modelsError: { state: true }, ollamaUrl: { state: true }, chats: { state: true },
+        streamingMessage: { state: true }, isStreaming: { state: true }, currentChatId: { state: true },
+        currentMessages: { state: true }, currentChat: { state: true }, isNewChat: { state: true },
+        newModelMode: { state: true }, newModelUrl: { state: true }, newModelProgress: { state: true },
+        newModelError: { state: true }, connectionStatus: { state: true }
     }; constructor() {
         super();
         this.app = new ChatApp();
         Object.assign(this, {
-            selectedChat: "New Chat", message: "", selectedModel: this.app.getStoredModel(), showModelSelector: false,
-            sidebarCollapsed: false, models: [], modelsLoading: true, modelsError: null,
-            streamingMessage: "", isStreaming: false, currentChatId: null, currentMessages: [],
-            currentChat: null, isNewChat: false, newModelMode: false, newModelUrl: "",
-            newModelProgress: null, newModelError: null, chats: []
+            selectedChat: "New Chat", message: "", selectedModel: this.app.getStoredModel(),
+            selectedProvider: this.app.getStoredProvider() || 'ollama', providers: this.app.getProviders(),
+            showModelSelector: false, sidebarCollapsed: false, models: [], modelsLoading: true,
+            modelsError: null, streamingMessage: "", isStreaming: false, currentChatId: null,
+            currentMessages: [], currentChat: null, isNewChat: false, newModelMode: false,
+            newModelUrl: "", newModelProgress: null, newModelError: null, chats: [],
+            connectionStatus: "checking"
         });
         this.ollamaUrl = this.app.getStoredUrl();
         this.loadChats();
@@ -64,10 +65,9 @@ export class ChatPage extends LitElement {
                 this.selectedModel = firstModel;
                 this.app.saveModel(firstModel); // Save the auto-selected model
             }
-
         } catch (err) {
             console.error('Failed to load models:', err);
-            this.modelsError = err.message || 'Failed to connect to Ollama server';
+            this.modelsError = err.message || `Failed to connect to ${this.providers[this.selectedProvider]?.name || 'server'}`;
         } finally {
             this.modelsLoading = false;
         }
@@ -153,9 +153,7 @@ export class ChatPage extends LitElement {
 
     handleInput(e) { this.message = e.target.value; }
     toggleSidebar() { this.sidebarCollapsed = !this.sidebarCollapsed; }
-    toggleModelSelector() { this.showModelSelector = !this.showModelSelector; }
-    selectModel(modelId) { this.selectedModel = modelId; this.showModelSelector = false; this.app.saveModel(modelId); }
-    async saveUrl(url) { await this.app.saveUrl(url); this.ollamaUrl = url; this.loadModels(); }
+    toggleModelSelector() { this.showModelSelector = !this.showModelSelector; } selectModel(modelId) { this.selectedModel = modelId; this.showModelSelector = false; this.app.saveModel(modelId); }
 
     async saveNewModel(modelUrl) {
         this.newModelMode = true;
@@ -174,6 +172,17 @@ export class ChatPage extends LitElement {
         }
     }
 
+    selectProvider(providerId) {
+        this.selectedProvider = providerId;
+        this.app.saveProvider(providerId);
+        this.loadModels();
+    }
+
+    async saveProviderConfig(providerId, config) {
+        await this.app.saveProviderConfig(providerId, config);
+        this.loadModels();
+    }
+
     render() {
         return html`
             <div class="app">
@@ -186,14 +195,15 @@ export class ChatPage extends LitElement {
                         <button class="toggle-sidebar-btn" @click=${this.toggleSidebar}>
                             ${this.sidebarCollapsed ? "☰" : "✕"}
                         </button>
-                        <h1 class="chat-title">${this.selectedChat}</h1>
-                        <model-selector
-                            .selectedModel=${this.selectedModel} .showModelSelector=${this.showModelSelector}
+                        <h1 class="chat-title">${this.selectedChat}</h1>                        <model-selector
+                            .selectedModel=${this.selectedModel} .selectedProvider=${this.selectedProvider}
+                            .providers=${this.providers} .showModelSelector=${this.showModelSelector}
                             .models=${this.models} .modelsLoading=${this.modelsLoading} .modelsError=${this.modelsError}
-                            .ollamaUrl=${this.ollamaUrl} .newModelMode=${this.newModelMode} .newModelUrl=${this.newModelUrl}
-                            .newModelProgress=${this.newModelProgress} .newModelError=${this.newModelError}
-                            .onToggleModelSelector=${() => this.toggleModelSelector()}
-                            .onSelectModel=${modelId => this.selectModel(modelId)} .onSaveUrl=${url => this.saveUrl(url)}
+                            .connectionStatus=${this.connectionStatus} .newModelMode=${this.newModelMode}
+                            .newModelUrl=${this.newModelUrl} .newModelProgress=${this.newModelProgress}
+                            .newModelError=${this.newModelError} .onToggleModelSelector=${() => this.toggleModelSelector()}
+                            .onSelectModel=${modelId => this.selectModel(modelId)} .onSelectProvider=${providerId => this.selectProvider(providerId)}
+                            .onSaveProviderConfig=${(providerId, config) => this.saveProviderConfig(providerId, config)}
                             .onSaveNewModel=${modelUrl => this.saveNewModel(modelUrl)} .onLoadModels=${() => this.loadModels()}>
                         </model-selector>
                     </div>

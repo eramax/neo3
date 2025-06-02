@@ -1,3 +1,15 @@
+## [June 2, 2025] - Multi-Provider Model Selector
+
+- **Changed:** Complete rewrite of model-selector.js to support multiple AI providers with individual configurations
+- **Reason:** Enable users to connect to different AI services (Ollama, OpenAI, OpenRouter, DeepSeek, Anthropic, Google AI) with provider-specific settings
+- **Impact:**
+  - Added provider tabs with configuration buttons for each service
+  - Implemented modal configuration for API keys and server URLs
+  - Added provider-specific connection status indicators
+  - Maintained Ollama-specific features (model pulling) only for Ollama provider
+  - Enhanced UI with provider badges and improved visual hierarchy
+  - Optimized performance with minimal code patterns and arrow functions
+
 ## [June 2, 2025] - Performance Optimization & Code Refactoring
 
 - **Changed:** Complete app refactoring with minimal code approach

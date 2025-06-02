@@ -2,6 +2,8 @@
 let Ollama = null;
 let ollama = null;
 let abortController = null;
+let currentProvider = 'ollama';
+let providerConfig = {};
 
 const loadOllama = async () => {
     if (!Ollama) {
@@ -11,8 +13,10 @@ const loadOllama = async () => {
     return Ollama;
 };
 
-const initOllama = async host => {
+const initOllama = async (host, provider = 'ollama', apiKey = '') => {
     const OllamaClass = await loadOllama();
+    currentProvider = provider;
+    providerConfig = { host, provider, apiKey };
     ollama = new OllamaClass({ host });
     return ollama;
 };
@@ -145,7 +149,7 @@ self.onmessage = async ({ data: { type, id, data } }) => {
     try {
         switch (type) {
             case 'init':
-                await initOllama(data.host);
+                await initOllama(data.host, data.provider, data.apiKey);
                 postMessage({ type: 'init', id, success: true });
                 break;
             case 'loadModels':

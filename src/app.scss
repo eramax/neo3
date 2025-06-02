@@ -449,11 +449,226 @@ body {
         margin-left: 0.5em;
         animation: pulse 1.5s infinite;
       }
-
       .new-model-error {
         color: #ef4444;
         font-size: 0.9em;
         margin-left: 0.5em;
+      }
+    }
+
+    // Provider styles
+    .provider-badge {
+      background: $accent;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 500;
+      margin-right: 4px;
+    }
+
+    .provider-section {
+      margin-bottom: 12px;
+      border-bottom: 1px solid $border;
+      padding-bottom: 12px;
+    }
+
+    .provider-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .provider-tab {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: $bg-tertiary;
+      border: 1px solid $border;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 11px;
+      color: $text-muted;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &.active {
+        background: $accent;
+        color: white;
+        border-color: $accent;
+      }
+
+      &:hover:not(.active) {
+        background: $border-light;
+        color: $text;
+      }
+    }
+
+    .provider-config-btn {
+      background: none;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      padding: 0;
+      font-size: 10px;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+
+    .provider-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: $text-muted;
+
+      &.status-connected {
+        background: $green;
+      }
+
+      &.status-error {
+        background: $red;
+      }
+
+      &.status-checking {
+        background: #fbbf24;
+        animation: pulse 1.5s infinite;
+      }
+    }
+
+    .status-text {
+      color: $text-muted;
+    }
+
+    // Provider config modal
+    .provider-config-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .provider-config-modal {
+      background: $bg-primary;
+      border: 1px solid $border-light;
+      border-radius: $radius-lg;
+      width: 400px;
+      max-width: 90vw;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .provider-config-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid $border;
+
+      h3 {
+        margin: 0;
+        font-size: 16px;
+        color: $text;
+      }
+
+      .close-btn {
+        background: none;
+        border: none;
+        color: $text-muted;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px;
+        transition: color 0.2s;
+
+        &:hover {
+          color: $text;
+        }
+      }
+    }
+
+    .provider-config-form {
+      padding: 20px;
+
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+        color: $text;
+        font-weight: 500;
+      }
+
+      input {
+        width: 100%;
+        background: $bg-secondary;
+        border: 1px solid $border;
+        border-radius: 6px;
+        padding: 10px 12px;
+        color: $text;
+        font-size: 14px;
+        margin-bottom: 16px;
+        transition: border-color 0.2s;
+
+        &:focus {
+          outline: none;
+          border-color: $accent;
+        }
+
+        &::placeholder {
+          color: $text-muted;
+        }
+      }
+    }
+
+    .provider-config-actions {
+      display: flex;
+      gap: 8px;
+      padding: 16px 20px;
+      border-top: 1px solid $border;
+      justify-content: flex-end;
+
+      button {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .save-btn {
+        background: $accent;
+        border: 1px solid $accent;
+        color: white;
+
+        &:hover {
+          background: $accent-hover;
+          border-color: $accent-hover;
+        }
+      }
+
+      .cancel-btn {
+        background: $bg-tertiary;
+        border: 1px solid $border;
+        color: $text;
+
+        &:hover {
+          background: $border-light;
+        }
       }
     }
   }

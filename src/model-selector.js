@@ -2,53 +2,113 @@ import { LitElement, html } from 'lit';
 
 export class ModelSelector extends LitElement {
     static properties = {
-        selectedModel: { type: String }, showModelSelector: { type: Boolean }, models: { type: Array },
-        modelsLoading: { type: Boolean }, modelsError: { type: String }, ollamaUrl: { type: String },
-        showUrlEditor: { type: Boolean }, tempUrl: { type: String }, connectionStatus: { type: String },
-        newModelMode: { type: Boolean }, newModelUrl: { type: String }, newModelProgress: { type: Object },
-        newModelError: { type: String }, onToggleModelSelector: { type: Function }, onSelectModel: { type: Function },
-        onSaveUrl: { type: Function }, onSaveNewModel: { type: Function }, onLoadModels: { type: Function }
+        selectedModel: { type: String }, selectedProvider: { type: String }, showModelSelector: { type: Boolean },
+        models: { type: Array }, modelsLoading: { type: Boolean }, modelsError: { type: String },
+        providers: { type: Object }, showProviderConfig: { type: Boolean }, editingProvider: { type: String },
+        tempConfig: { type: Object }, connectionStatus: { type: String }, newModelMode: { type: Boolean },
+        newModelUrl: { type: String }, newModelProgress: { type: Object }, newModelError: { type: String },
+        onToggleModelSelector: { type: Function }, onSelectModel: { type: Function }, onSelectProvider: { type: Function },
+        onSaveProviderConfig: { type: Function }, onSaveNewModel: { type: Function }, onLoadModels: { type: Function }
+    };
+
+    static defaultProviders = {
+        ollama: { name: 'Ollama', url: 'http://localhost:11434', apiKey: '', requiresApiKey: false },
+        openai: { name: 'OpenAI', url: 'https://api.openai.com/v1', apiKey: '', requiresApiKey: true },
+        openrouter: { name: 'OpenRouter', url: 'https://openrouter.ai/api/v1', apiKey: '', requiresApiKey: true },
+        deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', apiKey: '', requiresApiKey: true },
+        anthropic: { name: 'Anthropic', url: 'https://api.anthropic.com/v1', apiKey: '', requiresApiKey: true },
+        google: { name: 'Google AI', url: 'https://generativelanguage.googleapis.com/v1', apiKey: '', requiresApiKey: true }
     };
 
     constructor() {
         super();
         Object.assign(this, {
-            selectedModel: null, showModelSelector: false, models: [], modelsLoading: true,
-            modelsError: null, ollamaUrl: "", showUrlEditor: false, tempUrl: "",
-            connectionStatus: "checking", newModelMode: false, newModelUrl: "",
-            newModelProgress: null, newModelError: null
+            selectedModel: null, selectedProvider: 'ollama', showModelSelector: false, models: [],
+            modelsLoading: true, modelsError: null, providers: { ...ModelSelector.defaultProviders },
+            showProviderConfig: false, editingProvider: null, tempConfig: {}, connectionStatus: "checking",
+            newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null
+        });
+    } createRenderRoot() { return this; }
+
+    get currentModel() { return this.models.find(m => m.id === this.selectedModel) || this.models[0]; }
+    get currentProvider() { return this.providers[this.selectedProvider] || this.providers.ollama; }
+    get filteredModels() { return this.models || []; }
+
+    startProviderEdit(providerId) {
+        Object.assign(this, {
+            editingProvider: providerId,
+            tempConfig: { ...this.providers[providerId] },
+            showProviderConfig: true
         });
     }
 
-    createRenderRoot() { return this; }
+    saveProviderConfig() {
+        this.providers[this.editingProvider] = { ...this.tempConfig };
+        this.onSaveProviderConfig?.(this.editingProvider, this.tempConfig);
+        Object.assign(this, { showProviderConfig: false, editingProvider: null, tempConfig: {} });
+    }
 
-    get currentModel() { return this.models.find(m => m.id === this.selectedModel) || this.models[0]; }
-    get filteredModels() { return this.models || []; }
+    cancelProviderEdit() {
+        Object.assign(this, { showProviderConfig: false, editingProvider: null, tempConfig: {} });
+    }
 
-    render() {
+    renderProviderConfig() {
+        if (!this.showProviderConfig || !this.editingProvider) return '';
+        const config = this.tempConfig;
+        return html`
+            <div class="provider-config-overlay">
+                <div class="provider-config-modal">
+                    <div class="provider-config-header">
+                        <h3>Configure ${config.name}</h3>
+                        <button class="close-btn" @click=${this.cancelProviderEdit}>✕</button>
+                    </div>
+                    <div class="provider-config-form">
+                        <label>Server URL:</label>
+                        <input type="text" .value=${config.url} @input=${e => this.tempConfig = { ...this.tempConfig, url: e.target.value }}
+                            placeholder="https://api.example.com/v1" />
+                        ${config.requiresApiKey ? html`
+                            <label>API Key:</label>
+                            <input type="password" .value=${config.apiKey} @input=${e => this.tempConfig = { ...this.tempConfig, apiKey: e.target.value }}
+                                placeholder="Enter your API key" />
+                        ` : ''}
+                    </div>
+                    <div class="provider-config-actions">
+                        <button class="save-btn" @click=${this.saveProviderConfig}>Save</button>
+                        <button class="cancel-btn" @click=${this.cancelProviderEdit}>Cancel</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    } render() {
         return html`
             <div class="model-selector">
                 <button class="model-trigger" @click=${() => this.onToggleModelSelector?.()} ?disabled=${this.modelsLoading}>
+                    <span class="provider-badge">${this.currentProvider.name}</span>
                     <span class="model-name">${this.currentModel?.name || "Select Model"}</span>
                     <span class="chevron ${this.showModelSelector ? 'open' : ''}">▼</span>
                 </button>
                 ${this.showModelSelector ? html`
                     <div class="model-dropdown">
-                        <div class="server-config-compact">
-                            ${this.showUrlEditor ? html`
-                                <div class="server-status-indicator status-editing"></div>
-                                <input type="text" .value=${this.tempUrl} @input=${e => this.tempUrl = e.target.value}
-                                    placeholder="http://localhost:11434" class="server-url-input" />
-                                <button class="server-action-btn save" @click=${() => this.onSaveUrl?.(this.tempUrl)} title="Save">✓</button>
-                                <button class="server-action-btn cancel" @click=${() => this.showUrlEditor = false} title="Cancel">✕</button>
-                            ` : html`
-                                <div class="server-status-indicator status-${this.connectionStatus}"></div>
-                                <span class="server-url-display">${this.ollamaUrl}</span>
-                                <button class="server-action-btn edit" @click=${() => {
-                                    this.showUrlEditor = true;
-                                    this.tempUrl = this.ollamaUrl;
-                                }} title="Edit">✎</button>
-                            `}
+                        <div class="provider-section">
+                            <div class="provider-tabs">
+                                ${Object.entries(this.providers).map(([id, provider]) => html`
+                                    <button class="provider-tab ${this.selectedProvider === id ? 'active' : ''}"
+                                        @click=${() => this.onSelectProvider?.(id)}>
+                                        ${provider.name}
+                                        <button class="provider-config-btn" @click=${e => {
+                e.stopPropagation();
+                this.startProviderEdit(id);
+            }} title="Configure">⚙️</button>
+                                    </button>
+                                `)}
+                            </div>
+                            <div class="provider-status">
+                                <div class="status-indicator status-${this.connectionStatus}"></div>
+                                <span class="status-text">
+                                    ${this.connectionStatus === 'connected' ? 'Connected' :
+                    this.connectionStatus === 'error' ? 'Connection failed' : 'Connecting...'}
+                                </span>
+                            </div>
                         </div>
                         ${this.modelsLoading ? html`
                             <div class="model-loading">
@@ -62,9 +122,9 @@ export class ModelSelector extends LitElement {
                                         @click=${() => this.onSelectModel?.(model.id)}>
                                         <span class="model-title-display" title="${model.name}">${model.name}</span>
                                         <span class="model-badges">
-                                            <span class="badge size" title="Size">${model.size}</span>
-                                            <span class="badge format" title="Format">${model.format}</span>
-                                            <span class="badge arch" title="Architecture">${model.arch}</span>
+                                            ${model.size ? html`<span class="badge size" title="Size">${model.size}</span>` : ''}
+                                            ${model.format ? html`<span class="badge format" title="Format">${model.format}</span>` : ''}
+                                            ${model.arch ? html`<span class="badge arch" title="Architecture">${model.arch}</span>` : ''}
                                         </span>
                                         ${model.link ? html`
                                             <a href="${model.link}" target="_blank" class="model-link-icon" title="Open details"
@@ -78,43 +138,46 @@ export class ModelSelector extends LitElement {
                                         ` : ''}
                                     </button>
                                 `)}
-                                ${this.newModelMode ? html`
-                                    <div class="model-card single-line new-model-row">
-                                        <input class="new-model-input" type="text" .value=${this.newModelUrl}
-                                            @input=${e => this.newModelUrl = e.target.value}
-                                            placeholder="model name or URL (e.g. llama3)" autofocus
-                                            @keydown=${e => {
-                                                e.key === "Enter" && this.onSaveNewModel?.(this.newModelUrl);
-                                                e.key === "Escape" && Object.assign(this, { newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null });
-                                            }}
-                                            ?disabled=${!!this.newModelProgress} />
-                                        <button class="server-action-btn save" @click=${() => this.onSaveNewModel?.(this.newModelUrl)}
-                                            ?disabled=${!this.newModelUrl.trim() || !!this.newModelProgress} title="Pull model">✓</button>
-                                        <button class="server-action-btn cancel" @click=${() => Object.assign(this, { 
-                                            newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null 
-                                        })} title="Cancel">✕</button>
-                                        ${this.newModelProgress ? html`<span class="new-model-progress">
-                                            ${this.newModelProgress.status}${typeof this.newModelProgress.percent === "number" ? ` (${this.newModelProgress.percent}%)` : ''}
-                                        </span>` : ''}
-                                        ${this.newModelError ? html`<span class="new-model-error">${this.newModelError}</span>` : ''}
-                                    </div>
-                                ` : html`
-                                    <button class="model-card single-line new-model-row" @click=${() => Object.assign(this, { 
-                                        newModelMode: true, newModelUrl: "", newModelProgress: null, newModelError: null 
-                                    })} title="Pull new model">
-                                        <span class="model-title-display">+ New model</span>
-                                    </button>
-                                `}
+                                ${this.selectedProvider === 'ollama' ? html`
+                                    ${this.newModelMode ? html`
+                                        <div class="model-card single-line new-model-row">
+                                            <input class="new-model-input" type="text" .value=${this.newModelUrl}
+                                                @input=${e => this.newModelUrl = e.target.value}
+                                                placeholder="model name or URL (e.g. llama3)" autofocus
+                                                @keydown=${e => {
+                                e.key === "Enter" && this.onSaveNewModel?.(this.newModelUrl);
+                                e.key === "Escape" && Object.assign(this, { newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null });
+                            }}
+                                                ?disabled=${!!this.newModelProgress} />
+                                            <button class="server-action-btn save" @click=${() => this.onSaveNewModel?.(this.newModelUrl)}
+                                                ?disabled=${!this.newModelUrl.trim() || !!this.newModelProgress} title="Pull model">✓</button>
+                                            <button class="server-action-btn cancel" @click=${() => Object.assign(this, {
+                                newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null
+                            })} title="Cancel">✕</button>
+                                            ${this.newModelProgress ? html`<span class="new-model-progress">
+                                                ${this.newModelProgress.status}${typeof this.newModelProgress.percent === "number" ? ` (${this.newModelProgress.percent}%)` : ''}
+                                            </span>` : ''}
+                                            ${this.newModelError ? html`<span class="new-model-error">${this.newModelError}</span>` : ''}
+                                        </div>
+                                    ` : html`
+                                        <button class="model-card single-line new-model-row" @click=${() => Object.assign(this, {
+                                newModelMode: true, newModelUrl: "", newModelProgress: null, newModelError: null
+                            })} title="Pull new model">
+                                            <span class="model-title-display">+ New model</span>
+                                        </button>
+                                    `}
+                                ` : ''}
                             </div>
                         ` : html`
                             <div class="no-connection">
                                 <div class="no-connection-icon">🔌</div>
-                                <span>No connection to Ollama</span>
+                                <span>No connection to ${this.currentProvider.name}</span>
                                 <button @click=${() => this.onLoadModels?.()} class="retry-btn-compact">↻ Retry</button>
                             </div>
                         `}
                     </div>
                 ` : ''}
+                ${this.renderProviderConfig()}
             </div>
         `;
     }
