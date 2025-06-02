@@ -8,15 +8,20 @@ function initOllama(host) {
     ollama = new Ollama({ host });
 }
 
+// Chat with Ollama - separated for reusability
+async function chatWithOllama(model, messagesArray, stream = true) {
+    return await ollama.chat({
+        model,
+        messages: messagesArray.map(m => ({ role: m.role, content: m.content })),
+        stream
+    });
+}
+
 // Streaming implementation
 async function streamChatInternal(model, messagesArray, requestId, onChunk, onComplete, onError) {
     let content = '';
     try {
-        const response = await ollama.chat({
-            model,
-            messages: messagesArray.map(m => ({ role: m.role, content: m.content })),
-            stream: true
-        });
+        const response = await chatWithOllama(model, messagesArray);
 
         abortController = response;
 
