@@ -173,5 +173,17 @@
 ## [2024-12-19] - Provider-Specific Model Loading Fix
 
 - **Changed:** Fixed worker loadModels to use provider-specific configuration instead of initialized instance
-- **Reason:** Models were loading with wrong provider URL when expanding different providers  
+- **Reason:** Models were loading with wrong provider URL when expanding different providers
 - **Impact:** Each provider now correctly loads models using its own configuration URL
+
+## [2024-12-19] - Model Selector Code Cleanup
+
+- **Changed:** Removed duplicated provider definitions and simplified status indicator logic
+- **Reason:** Code duplication maintenance issues and cleaner component structure
+- **Impact:** Reduced code complexity, single source of truth for provider configurations
+
+## [2024-12-19] - Core and Worker Code Cleanup
+
+- **Changed:** Consolidated provider definitions and removed duplicated model mapping code
+- **Reason:** Reduced code duplication and improved maintainability across core and worker files
+- **Impact:** Single source of truth for provider configs, cleaner model loading logic

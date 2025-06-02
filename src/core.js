@@ -225,8 +225,7 @@ export class ChatApp {
             anthropic: { name: 'Anthropic', url: 'https://api.anthropic.com/v1', apiKey: '', requiresApiKey: true },
             google: { name: 'Google AI', url: 'https://generativelanguage.googleapis.com/v1', apiKey: '', requiresApiKey: true }
         };
-        const stored = this.load('providers', {});
-        return { ...defaultProviders, ...stored };
+        return { ...defaultProviders, ...this.load('providers', {}) };
     }
 
     async saveProviderConfig(providerId, config) {
@@ -234,7 +233,6 @@ export class ChatApp {
         providers[providerId] = { ...providers[providerId], ...config };
         this.save('providers', providers);
 
-        // If this is the current provider, reinitialize worker
         if (providerId === this.getStoredProvider()) {
             this.initialized = false;
             this.initPromise = this.initWorker();

@@ -12,18 +12,11 @@ export class ModelSelector extends LitElement {
         onLoadModels: { type: Function }
     };
 
-    static defaultProviders = {
-        ollama: { name: 'Ollama', url: 'http://localhost:11434', apiKey: '', requiresApiKey: false },
-        openai: { name: 'OpenAI', url: 'https://api.openai.com/v1', apiKey: '', requiresApiKey: true },
-        openrouter: { name: 'OpenRouter', url: 'https://openrouter.ai/api/v1', apiKey: '', requiresApiKey: true },
-        deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', apiKey: '', requiresApiKey: true },
-        anthropic: { name: 'Anthropic', url: 'https://api.anthropic.com/v1', apiKey: '', requiresApiKey: true },
-        google: { name: 'Google AI', url: 'https://generativelanguage.googleapis.com/v1', apiKey: '', requiresApiKey: true }
-    }; constructor() {
+    constructor() {
         super();
         Object.assign(this, {
             selectedModel: null, selectedProvider: 'ollama', showModelSelector: false, models: [],
-            modelsLoading: true, modelsError: null, providers: { ...ModelSelector.defaultProviders },
+            modelsLoading: true, modelsError: null, providers: {},
             showProviderConfig: false, editingProvider: null, tempConfig: {}, connectionStatus: "checking",
             newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null,
             expandedProviders: new Set(), loadingProviders: new Set()
@@ -39,28 +32,26 @@ export class ModelSelector extends LitElement {
         }
     }
 
-    get currentModel() { return this.filteredModels.find(m => m.id === this.selectedModel) || null; }
+    get currentModel() { return this.models.find(m => m.id === this.selectedModel) || null; }
 
     get currentProvider() { return this.providers[this.selectedProvider] || this.providers.ollama; }
 
-    get filteredModels() {
-        return (this.models || []);
+    getModelsForProvider(providerId) {
+        return this.models.filter(model => model.provider === providerId);
     }
 
-    getModelsForProvider(providerId) {
-        return (this.models || []).filter(model => model.provider === providerId);
-    } toggleProvider(providerId) {
-        // Close all other providers and open only the clicked one
+    toggleProvider(providerId) {
         this.expandedProviders.clear();
         this.expandedProviders.add(providerId);
 
-        // Load models for this provider when expanded (lazy loading)
         if (!this.getModelsForProvider(providerId).length) {
             this.loadingProviders.add(providerId);
             this.onLoadModels?.(providerId);
         }
         this.requestUpdate();
-    } selectModel(modelId, providerId) {
+    }
+
+    selectModel(modelId, providerId) {
         this.selectedProvider = providerId;
         this.onSelectProvider?.(providerId);
         this.onSelectModel?.(modelId);
@@ -143,7 +134,8 @@ export class ModelSelector extends LitElement {
             }} title="Configure ${provider.name}">⚙️</button>
                                             <span class="accordion-chevron ${this.expandedProviders.has(id) ? 'expanded' : ''}">▼</span>
                                         </div>
-                                    </div>                                    ${this.expandedProviders.has(id) ? html`
+                                    </div>
+                                    ${this.expandedProviders.has(id) ? html`
                                         <div class="accordion-content">
                                             ${this.loadingProviders.has(id) ? html`
                                                 <div class="model-loading">
@@ -156,13 +148,7 @@ export class ModelSelector extends LitElement {
                                                         <button class="model-card ${model.id === this.selectedModel ? 'selected' : ''}"
                                                             @click=${() => this.selectModel(model.id, id)}>
                                                             <div class="model-status-icon">
-                                                                ${provider.requiresApiKey && provider.apiKey ? html`
-                                                                    <div class="status-indicator status-${this.connectionStatus}"></div>
-                                                                ` : !provider.requiresApiKey ? html`
-                                                                    <div class="status-indicator status-${this.connectionStatus}"></div>
-                                                                ` : html`
-                                                                    <div class="status-indicator status-error"></div>
-                                                                `}
+                                                                <div class="status-indicator status-${provider.requiresApiKey && !provider.apiKey ? 'error' : this.connectionStatus}"></div>
                                                             </div>
                                                             <span class="model-title-display" title="${model.name}">${model.name}</span>
                                                             <span class="model-badges">
@@ -212,7 +198,8 @@ export class ModelSelector extends LitElement {
                                                         `}
                                                     ` : ''}
                                                 </div>
-                                            ` : html`                                                <div class="no-connection">
+                                            ` : html`
+                                                <div class="no-connection">
                                                     <div class="no-connection-icon">🔌</div>
                                                     <span>No models available for ${provider.name}</span>
                                                     ${!this.loadingProviders.has(id) ? html`

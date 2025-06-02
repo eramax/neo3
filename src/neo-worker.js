@@ -74,10 +74,8 @@ const pullModel = async (requestId, { modelUrl }) => {
 const loadModels = async (specificProvider = null, specificConfig = null) => {
     const allModels = [];
 
-    // Load Ollama models if available and requested
     if (!specificProvider || specificProvider === 'ollama') {
         try {
-            // Use specific config if provided, otherwise use current ollama instance
             let ollamaInstance = ollama;
             if (specificConfig && specificProvider === 'ollama') {
                 const OllamaClass = await loadOllama();
@@ -85,7 +83,7 @@ const loadModels = async (specificProvider = null, specificConfig = null) => {
             }
 
             const { models } = await ollamaInstance.list();
-            const ollamaModels = models.map(model => {
+            allModels.push(...models.map(model => {
                 const baseName = model.name.split(':')[0];
                 let displayName = baseName;
                 let link = `https://ollama.com/library/${displayName}`;
@@ -97,23 +95,16 @@ const loadModels = async (specificProvider = null, specificConfig = null) => {
                 }
 
                 return {
-                    id: model.name,
-                    name: displayName,
-                    arch: model.details?.family || 'Unknown',
-                    size: formatSize(model.size),
-                    format: model.details?.format?.toUpperCase() || 'Unknown',
-                    link,
-                    details: model.details || {},
-                    provider: 'ollama'
+                    id: model.name, name: displayName, arch: model.details?.family || 'Unknown',
+                    size: formatSize(model.size), format: model.details?.format?.toUpperCase() || 'Unknown',
+                    link, details: model.details || {}, provider: 'ollama'
                 };
-            });
-            allModels.push(...ollamaModels);
+            }));
         } catch (error) {
             console.log('Ollama not available:', error.message);
         }
     }
 
-    // Add models for other providers
     const providerModels = {
         openai: [
             { id: 'gpt-4o', name: 'GPT-4o', arch: 'Transformer', size: 'Large', format: 'API', link: 'https://openai.com/gpt-4', provider: 'openai' },
@@ -139,11 +130,9 @@ const loadModels = async (specificProvider = null, specificConfig = null) => {
         ]
     };
 
-    // Add provider models based on request
     if (specificProvider && providerModels[specificProvider]) {
         allModels.push(...providerModels[specificProvider]);
     } else if (!specificProvider) {
-        // Add all provider models if no specific provider requested
         Object.values(providerModels).forEach(models => allModels.push(...models));
     }
 
