@@ -1,3 +1,17 @@
+## [June 3, 2025] - Enhanced Model Selector UX
+
+- **Changed:** Improved model selector behavior for better user experience
+- **Reason:** User requested more intuitive provider/model selection workflow
+- **Impact:**
+  - Fixed modal width to 450px for consistent sizing
+  - When clicking provider, only expands/shows models without switching provider
+  - Provider and model selection only happens when clicking specific model
+  - Closes other providers when expanding one for better focus
+  - Added status icons beside models instead of text for configured providers
+  - Models take full width for better readability
+  - Added overflow with max 70% screen height for large model lists
+  - Removed "Select Provider" button - direct model selection workflow
+
 ## [June 2, 2025] - Multi-Provider Model Selector
 
 - **Changed:** Complete rewrite of model-selector.js to support multiple AI providers with individual configurations

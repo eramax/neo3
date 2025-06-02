@@ -30,21 +30,21 @@ export class ModelSelector extends LitElement {
         });
     } createRenderRoot() { return this; } get currentModel() { return this.filteredModels.find(m => m.id === this.selectedModel) || null; }
     get currentProvider() { return this.providers[this.selectedProvider] || this.providers.ollama; } get filteredModels() {
-        return (this.models || []).filter(model => model.provider === this.selectedProvider);
+        return (this.models || []);
+    }
+
+    getModelsForProvider(providerId) {
+        return (this.models || []).filter(model => model.provider === providerId);
     } toggleProvider(providerId) {
         // Close all other providers and open only the selected one
         this.expandedProviders = new Set([providerId]);
-
-        // If clicking on already selected provider, select it but keep it expanded
-        if (this.selectedProvider !== providerId) {
-            this.selectedProvider = providerId;
-            this.onSelectProvider?.(providerId);
-        }
-
         this.requestUpdate();
     }
 
-    selectModel(modelId) {
+    selectModel(modelId, providerId) {
+        // Switch provider and select model when clicking on a specific model
+        this.selectedProvider = providerId;
+        this.onSelectProvider?.(providerId);
         this.onSelectModel?.(modelId);
     }
 
@@ -124,11 +124,11 @@ export class ModelSelector extends LitElement {
                                                     <div class="loading-spinner"></div>
                                                     <span>Loading models...</span>
                                                 </div>
-                                            ` : this.filteredModels.length > 0 && this.selectedProvider === id ? html`
+                                            ` : this.getModelsForProvider(id).length > 0 ? html`
                                                 <div class="models-grid">
-                                                    ${this.filteredModels.map(model => html`
+                                                    ${this.getModelsForProvider(id).map(model => html`
                                                         <button class="model-card ${model.id === this.selectedModel ? 'selected' : ''}"
-                                                            @click=${() => this.selectModel(model.id)}>
+                                                            @click=${() => this.selectModel(model.id, id)}>
                                                             <div class="model-status-icon">
                                                                 ${provider.requiresApiKey && provider.apiKey ? html`
                                                                     <div class="status-indicator status-${this.connectionStatus}"></div>
@@ -186,13 +186,15 @@ export class ModelSelector extends LitElement {
                                                         `}
                                                     ` : ''}
                                                 </div>
-                                            ` : this.selectedProvider === id ? html`
+                                            ` : html`
                                                 <div class="no-connection">
                                                     <div class="no-connection-icon">🔌</div>
-                                                    <span>No connection to ${provider.name}</span>
-                                                    <button @click=${() => this.onLoadModels?.()} class="retry-btn-compact">↻ Retry</button>
+                                                    <span>No models available for ${provider.name}</span>
+                                                    ${id === this.selectedProvider ? html`
+                                                        <button @click=${() => this.onLoadModels?.()} class="retry-btn-compact">↻ Retry</button>
+                                                    ` : ''}
                                                 </div>
-                                            ` : ''}
+                                            `}
                                         </div>
                                     ` : ''}
                                 </div>

@@ -11,6 +11,7 @@
 - Use ES6+ features for modern JavaScript practices
 - use only dark mode colors for UI elements
 - always use bun and not npm
+- Use window path for all file paths e.g, /g/file.txt
 
 ## JavaScript Specific Rules
 
