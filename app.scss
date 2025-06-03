@@ -1,0 +1,84 @@
+.mermaid-container {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  text-align: center;
+  min-height: 60px;
+
+  svg {
+    max-width: 100%;
+    height: auto;
+    background: transparent;
+
+    .node rect,
+    .node circle,
+    .node ellipse,
+    .node polygon {
+      stroke: #666 !important;
+      fill: #2d2d2d !important;
+    }
+
+    .node .label,
+    text {
+      color: #e0e0e0 !important;
+      fill: #e0e0e0 !important;
+    }
+
+    .edgePath path,
+    line {
+      stroke: #888 !important;
+    }
+
+    .arrowheadPath,
+    marker path {
+      fill: #888 !important;
+      stroke: #888 !important;
+    }
+
+    .edgeLabel {
+      background-color: #1e1e1e !important;
+      color: #e0e0e0 !important;
+    }
+  }
+}
+
+.mermaid-loading {
+  color: #888;
+  font-style: italic;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mermaid-rendered {
+  background: transparent;
+}
+
+.mermaid-error-container {
+  background: #2d1b1b;
+  border: 1px solid #5d3333;
+}
+
+.mermaid-error {
+  color: #ff6b6b;
+  padding: 12px;
+
+  p {
+    margin: 0 0 8px 0;
+    font-weight: bold;
+  }
+
+  pre {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 12px;
+    color: #ccc;
+    overflow-x: auto;
+    text-align: left;
+  }
+}

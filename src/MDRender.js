@@ -6,6 +6,7 @@ import katex from "katex";
 import { remarkSyntaxHighlight } from "./syntax-highlighter.js";
 import { DOMUtils } from "./DOMUtils.js";
 import { remarkCustomTags, createDefaultTags } from "./remarkCustomTags.js";
+import { renderMermaidDiagram, isMermaidCode } from "./mermaid-handler.js";
 
 // Constants
 const HTML_ESCAPE_MAP = {
@@ -165,7 +166,13 @@ export class IncrementalMarkdown extends HTMLElement {
         }
 
         const html = this.createHTMLFromNode(newNode);
-        return this._createElementFromHTML(html);
+        const element = this._createElementFromHTML(html);
+
+        if (isMermaidCode(newNode)) {
+            setTimeout(() => renderMermaidDiagram(newNode.value, element), 0);
+        }
+
+        return element;
     }
 
     _applyDOMChanges(updatedIndices, newDomElements) {
@@ -246,6 +253,13 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     _updateCodeBlock(element, newNode, oldNode) {
+        if (isMermaidCode(newNode)) {
+            if (newNode.value !== oldNode?.value) {
+                renderMermaidDiagram(newNode.value, element);
+            }
+            return;
+        }
+
         const codeElement = element.querySelector('pre code');
         const languageSpan = element.querySelector('.code-language');
 
@@ -349,6 +363,12 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     createCodeBlockHTML(node) {
+        if (isMermaidCode(node)) {
+            return `<div class="mermaid-container">
+                <div class="mermaid-loading">Loading diagram...</div>
+            </div>`;
+        }
+
         const language = node.lang || "plaintext"
         const escapedLanguage = this.escapeHtml(language)
         const codeContent = node.highlighted || this.escapeHtml(node.value)

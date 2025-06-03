@@ -25,6 +25,7 @@
     "katex": "^0.16.22",
     "lit": "^3.3.0",
     "lit-css-loader": "^3.0.1",
+    "mermaid": "^11.6.0",
     "openai": "^5.0.2",
     "prismjs": "^1.30.0",
     "rehype-katex": "^7.0.1",
