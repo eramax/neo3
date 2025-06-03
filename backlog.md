@@ -15,3 +15,12 @@
 - User wants to enable math and katex support for rendering mathematical expressions
 - User wants to replace highlight.js with Prism.js for better performance and smarter code highlighting
 - User wants to update SCSS to support Prism.js syntax highlighting with GitHub dark theme
+- User wants to convert think to an extension system that handles custom tags with configurable components and robust handling of unclosed tags in streaming content
+- User wants to fix missing createHTMLFromChildren and createCodeBlockHTML methods causing TypeError in remark extension
+- User wants to convert custom tag system to proper remark extension instead of preprocessing
+- User wants to use tag name as node type instead of generic 'customTag' type
+- User wants to fix custom tag rendering not using renderer and showing raw HTML tags
+- User wants to fix custom tag processing by ensuring remark transformations run after parsing
+- User wants to clean up and refactor custom tag extension code by removing unnecessary parts and optimizing implementation
+- User wants to fix custom tag extension to capture all content until tag is closed across multiple HTML nodes
+- User wants to fix custom tag extension to prevent other nodes from rendering while custom tag is not finished

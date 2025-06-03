@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import Prism from "prismjs";
 import katex from "katex";
+import { visit } from "unist-util-visit";
 
 // Constants
 const HTML_ESCAPE_MAP = {
@@ -22,6 +23,106 @@ const UPDATABLE_NODE_TYPES = new Set([
     'list', 'listItem', 'link', 'inlineMath', 'math'
 ]);
 
+// Remark Custom Tag Extension
+const remarkCustomTags = (options = {}) => {
+    const registeredTags = new Map(Object.entries(options.tags || {}));
+
+    return (tree) => {
+        const nodesToRemove = [];
+        let openTag = null;
+        let collectedContent = '';
+        let startIndex = -1;
+        let parentNode = null;
+
+        visit(tree, (node, index, parent) => {
+            if (node.type === 'html' && parent) {
+                const { value } = node;
+
+                for (const [tagName, config] of registeredTags) {
+                    // Check for opening tag
+                    if (value.includes(`<${tagName}>`)) {
+                        if (!openTag) {
+                            openTag = tagName;
+                            collectedContent = value.split(`<${tagName}>`)[1] || '';
+                            startIndex = index;
+                            parentNode = parent;
+
+                            // Check if tag closes in same node
+                            if (collectedContent.includes(`</${tagName}>`)) {
+                                const endContent = collectedContent.split(`</${tagName}>`)[0];
+                                parent.children[index] = {
+                                    type: tagName,
+                                    tagName,
+                                    value: endContent.trim(),
+                                    config
+                                };
+                                openTag = null;
+                                collectedContent = '';
+                                return;
+                            }
+                        }
+                    }
+
+                    // Check for closing tag
+                    if (openTag === tagName && value.includes(`</${tagName}>`)) {
+                        const endContent = value.split(`</${tagName}>`)[0];
+                        collectedContent += endContent;
+
+                        // Replace the start node with custom tag
+                        parentNode.children[startIndex] = {
+                            type: tagName,
+                            tagName,
+                            value: collectedContent.trim(),
+                            config
+                        };
+
+                        // Mark nodes for removal
+                        for (let i = startIndex + 1; i <= index; i++) {
+                            nodesToRemove.push({ parent: parentNode, index: i });
+                        }
+
+                        openTag = null;
+                        collectedContent = '';
+                        return;
+                    }
+                }
+
+                // Collect content if we're inside an open tag
+                if (openTag) {
+                    collectedContent += value;
+                    if (index !== startIndex) {
+                        nodesToRemove.push({ parent, index });
+                    }
+                }
+            } else if (openTag && parent) {
+                const nodeText = node.type === 'text' ? node.value :
+                    node.children ? tree.toString().slice(node.position?.start?.offset || 0, node.position?.end?.offset || 0) : '';
+
+                collectedContent += nodeText;
+                nodesToRemove.push({ parent, index });
+            }
+        });
+
+        // Handle unclosed tags
+        if (openTag && parentNode) {
+            const config = registeredTags.get(openTag);
+            parentNode.children[startIndex] = {
+                type: openTag,
+                tagName: openTag,
+                value: collectedContent.trim(),
+                config
+            };
+        }
+
+        // Remove collected nodes (in reverse order to maintain indices)
+        nodesToRemove.reverse().forEach(({ parent, index }) => {
+            if (parent.children[index]) {
+                parent.children.splice(index, 1);
+            }
+        });
+    };
+};
+
 export class IncrementalMarkdown extends HTMLElement {
     constructor() {
         super();
@@ -29,8 +130,36 @@ export class IncrementalMarkdown extends HTMLElement {
         this._container = document.createElement('div');
         this._lastProcessedAst = null;
         this.processedLength = 0;
-        this.processor = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
+        this.customTags = new Map();
+        this._setupProcessor();
         this._setupEventListeners();
+        this._registerDefaultTags();
+    }
+
+    _setupProcessor() {
+        this.processor = unified()
+            .use(remarkParse)
+            .use(remarkGfm)
+            .use(remarkMath)
+            .use(remarkCustomTags, { tags: Object.fromEntries(this.customTags) });
+    }
+
+    _registerDefaultTags() {
+        this.registerCustomTag('think', {
+            renderer: (content) => `
+                <details class="think-block">
+                    <summary>Thinking process</summary>
+                    <div class="think-content">${content}</div>
+                </details>
+            `
+        });
+    }
+
+    registerCustomTag(tagName, config) {
+        this.customTags.set(tagName.toLowerCase(), {
+            renderer: config.renderer || ((content) => `<div class="custom-tag-${tagName}">${content}</div>`)
+        });
+        this._setupProcessor();
     }
 
     connectedCallback() {
@@ -55,19 +184,7 @@ export class IncrementalMarkdown extends HTMLElement {
 
     // Content preprocessing
     _preprocessContent(value) {
-        if (!value) return value;
-
-        // Handle unclosed <think> tags
-        const openThinkCount = (value.match(/<think>/g) || []).length;
-        const closeThinkCount = (value.match(/<\/think>/g) || []).length;
-
-        let processedValue = value;
-        if (openThinkCount > closeThinkCount) {
-            processedValue += "</think>";
-        }
-
-        // Convert <think> blocks to details code blocks
-        return processedValue.replace(/<think>([\s\S]*?)<\/think>/g, "```details\n$1\n```");
+        return value;
     }
 
     // Event handling
@@ -105,9 +222,10 @@ export class IncrementalMarkdown extends HTMLElement {
         }
 
         const newAst = this.processor.parse(this.content);
+        const transformedAst = this.processor.runSync(newAst);
 
-        this._updateDOM(newAst);
-        this._lastProcessedAst = newAst;
+        this._updateDOM(transformedAst);
+        this._lastProcessedAst = transformedAst;
         this.processedLength = this.content.length;
     }
 
@@ -194,10 +312,14 @@ export class IncrementalMarkdown extends HTMLElement {
 
     // Node comparison and updating
     _canUpdateInPlace(newNode, oldNode) {
-        return newNode.type === oldNode.type && UPDATABLE_NODE_TYPES.has(newNode.type);
+        return newNode.type === oldNode.type && (UPDATABLE_NODE_TYPES.has(newNode.type) || this.customTags.has(newNode.type));
     }
 
     _updateElementInPlace(element, newNode, oldNode) {
+        if (this.customTags.has(newNode.type)) {
+            return this._updateCustomTag(element, newNode, oldNode);
+        }
+
         const updateHandlers = {
             text: () => this._updateTextNode(element, newNode),
             inlineCode: () => element.textContent = newNode.value,
@@ -213,6 +335,14 @@ export class IncrementalMarkdown extends HTMLElement {
 
         const handler = updateHandlers[newNode.type] || updateHandlers.default;
         return handler();
+    }
+
+    _updateCustomTag(element, newNode, oldNode) {
+        const config = this.customTags.get(newNode.tagName);
+        if (config && newNode.value !== oldNode?.value) {
+            element.innerHTML = config.renderer(newNode.value);
+        }
+        return true;
     }
 
     _updateTextNode(element, newNode) {
@@ -253,6 +383,16 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     _updateCodeBlock(element, newNode, oldNode) {
+        // Handle custom tags
+        if (newNode.lang && newNode.lang.endsWith('-custom')) {
+            const tagName = newNode.lang.replace('-custom', '');
+            const newContent = this.customTagExtension.renderCustomTag(newNode.value, tagName);
+            if (element.innerHTML !== newContent) {
+                element.innerHTML = newContent;
+            }
+            return;
+        }
+
         const codeElement = element.querySelector('pre code');
         const languageSpan = element.querySelector('.code-language');
 
@@ -348,6 +488,10 @@ export class IncrementalMarkdown extends HTMLElement {
     _nodesEqual(node1, node2) {
         if (!node1 || !node2 || node1.type !== node2.type) return false;
 
+        if (this.customTags.has(node1.type)) {
+            return node1.value === node2.value;
+        }
+
         const equalityCheckers = {
             text: () => node1.value === node2.value,
             inlineCode: () => node1.value === node2.value,
@@ -375,6 +519,10 @@ export class IncrementalMarkdown extends HTMLElement {
     createHTMLFromNode(node) {
         if (!node) return '';
 
+        if (this.customTags.has(node.type)) {
+            return this.createCustomTagHTML(node);
+        }
+
         const htmlGenerators = {
             paragraph: () => `<p>${this.createHTMLFromChildren(node.children)}</p>`,
             heading: () => `<h${node.depth}>${this.createHTMLFromChildren(node.children)}</h${node.depth}>`,
@@ -382,7 +530,7 @@ export class IncrementalMarkdown extends HTMLElement {
             strong: () => `<strong>${this.createHTMLFromChildren(node.children)}</strong>`,
             emphasis: () => `<em>${this.createHTMLFromChildren(node.children)}</em>`,
             inlineCode: () => `<code class="inline-code">${this.escapeHtml(node.value)}</code>`,
-            code: () => node.lang === "details" ? this.createThinkBlockHTML(node.value) : this.createCodeBlockHTML(node),
+            code: () => this.createCodeBlockHTML(node),
             blockquote: () => `<blockquote>${this.createHTMLFromChildren(node.children)}</blockquote>`,
             list: () => {
                 const tag = node.ordered ? "ol" : "ul";
@@ -430,13 +578,9 @@ export class IncrementalMarkdown extends HTMLElement {
         `;
     }
 
-    createThinkBlockHTML(content) {
-        return `
-            <details class="think-block">
-                <summary>Thinking process</summary>
-                <div class="think-content">${content}</div>
-            </details>
-        `;
+    createCustomTagHTML(node) {
+        const config = this.customTags.get(node.tagName);
+        return config ? config.renderer(node.value) : `<div class="unknown-tag">${node.value}</div>`;
     }
 
     // Utility methods
