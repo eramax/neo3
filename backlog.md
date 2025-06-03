@@ -32,3 +32,4 @@
 - User wants to fix Go code block highlighting by switching to synchronous Prism language imports and adding golang alias
 - User wants to fix syntax highlighting not working for any languages by adding debugging and improving highlighting logic
 - User wants to fix Prism tokenizePlaceholders error by removing problematic language imports that cause dependency conflicts
+- User wants to restore all removed Prism languages by adding markup-templating dependency to fix tokenizePlaceholders errors
