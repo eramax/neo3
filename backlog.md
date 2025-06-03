@@ -40,3 +40,4 @@
 - User wants to fix custom element constructor error by changing DOMUtils from abstract class to composition pattern
 - User wants to add Mermaid diagram support for code blocks with ```mermaid syntax
 - User wants to fix Mermaid diagram rendering issue where diagrams showed loading but never rendered
+- User wants to fix Mermaid diagram light colors by implementing proper dark mode theming with CSS overrides and theme variables

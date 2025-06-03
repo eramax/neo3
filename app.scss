@@ -1,11 +1,17 @@
 .mermaid-container {
-  background: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 8px;
-  padding: 16px;
-  margin: 16px 0;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
   text-align: center;
-  min-height: 60px;
+  min-height: 80px;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
 
   svg {
     max-width: 100%;
@@ -15,42 +21,97 @@
     .node rect,
     .node circle,
     .node ellipse,
-    .node polygon {
-      stroke: #666 !important;
-      fill: #2d2d2d !important;
+    .node polygon,
+    .node path {
+      fill: #1e293b !important;
+      stroke: #475569 !important;
+      stroke-width: 1.5px !important;
     }
 
-    .node .label,
-    text {
-      color: #e0e0e0 !important;
-      fill: #e0e0e0 !important;
-    }
-
-    .edgePath path,
-    line {
-      stroke: #888 !important;
+    .edgePath .path,
+    .flowchart-link {
+      stroke: #64748b !important;
+      stroke-width: 2px !important;
     }
 
     .arrowheadPath,
     marker path {
-      fill: #888 !important;
-      stroke: #888 !important;
+      fill: #64748b !important;
+      stroke: #64748b !important;
     }
 
+    text,
+    .label,
+    .nodeLabel,
     .edgeLabel {
-      background-color: #1e1e1e !important;
-      color: #e0e0e0 !important;
+      fill: #e2e8f0 !important;
+      color: #e2e8f0 !important;
+      font-weight: 500 !important;
+    }
+
+    .cluster rect {
+      fill: #1e293b !important;
+      stroke: #475569 !important;
+      stroke-width: 1px !important;
+    }
+
+    .actor {
+      fill: #1e293b !important;
+      stroke: #475569 !important;
+    }
+
+    .messageText,
+    .noteText,
+    text.actor {
+      fill: #e2e8f0 !important;
+      font-weight: 500 !important;
+    }
+
+    .messageLine0,
+    .messageLine1 {
+      stroke: #64748b !important;
+      stroke-width: 1.5px !important;
+    }
+
+    .sequenceNumber {
+      fill: #e2e8f0 !important;
+    }
+
+    .loopText,
+    .loopText tspan {
+      fill: #e2e8f0 !important;
     }
   }
 }
 
 .mermaid-loading {
-  color: #888;
+  color: #64748b;
   font-style: italic;
-  padding: 20px;
+  padding: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 14px;
+  gap: 8px;
+
+  &::before {
+    content: "";
+    width: 16px;
+    height: 16px;
+    border: 2px solid #64748b;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .mermaid-rendered {
@@ -58,27 +119,30 @@
 }
 
 .mermaid-error-container {
-  background: #2d1b1b;
-  border: 1px solid #5d3333;
+  background: #1e1b2e;
+  border: 1px solid #3c2a4a;
+  border-radius: 8px;
 }
 
 .mermaid-error {
-  color: #ff6b6b;
-  padding: 12px;
+  color: #f87171;
+  padding: 16px;
 
   p {
-    margin: 0 0 8px 0;
-    font-weight: bold;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+    font-size: 14px;
   }
 
   pre {
-    background: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 4px;
-    padding: 8px;
-    font-size: 12px;
-    color: #ccc;
+    background: #0c0a14;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 13px;
+    color: #94a3b8;
     overflow-x: auto;
     text-align: left;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
   }
 }
