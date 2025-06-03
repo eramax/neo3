@@ -56,7 +56,7 @@ export class ChatApp {
         const providerConfig = providers[currentProvider] || providers.ollama;
 
         await this.sendWorkerMessage('init', {
-            host: providerConfig.url,
+            url: providerConfig.url, // Fix: use 'url' instead of 'host'
             provider: currentProvider,
             apiKey: providerConfig.apiKey
         });
@@ -115,11 +115,12 @@ export class ChatApp {
                 detail: { chatId, newTitle: title }
             }));
         }
-    } async loadModels(provider = null, providerConfig = null) {
+    } async loadModels(providerId, providerConfig = null) {
         await this.ensureInitialized();
+        const config = providerConfig || this.getProviders()[providerId];
         const models = await this.sendWorkerMessage('loadModels', {
-            provider,
-            providerConfig
+            provider: providerId,
+            config
         });
         return models;
     } async pullModel(modelUrl, onProgress) {

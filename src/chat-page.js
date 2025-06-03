@@ -53,35 +53,30 @@ export class ChatPage extends LitElement {
     } async loadModels(providerId = null) {
         const targetProvider = providerId || this.selectedProvider;
         const targetConfig = this.providers[targetProvider];
-        this.modelsLoading = true;
+
+        if (this.loadingProviders?.has?.(targetProvider)) return;
+
+        this.modelsLoading = targetProvider === this.selectedProvider;
         this.modelsError = null;
+
         try {
             const newModels = await this.app.loadModels(targetProvider, targetConfig);
-
             this.models = this.models.filter(m => m.provider !== targetProvider);
             this.models = [...this.models, ...newModels];
 
-            if (targetProvider === this.selectedProvider) {
-                const providerModels = newModels;
-                const storedModel = this.app.getStoredModel();
-                const firstProviderModel = providerModels[0]?.id;
-
-                if (storedModel && providerModels.find(m => m.id === storedModel)) {
-                    this.selectedModel = storedModel;
-                } else if (firstProviderModel) {
-                    this.selectedModel = firstProviderModel;
-                    this.app.saveModel(firstProviderModel);
+            if (targetProvider === this.selectedProvider && !this.selectedModel) {
+                const firstModel = newModels[0]?.id;
+                if (firstModel) {
+                    this.selectedModel = firstModel;
+                    this.app.saveModel(firstModel);
                 }
             }
         } catch (err) {
-            console.error('Failed to load models:', err);
-            this.modelsError = err.message || `Failed to connect to ${this.providers[targetProvider]?.name || 'server'}`;
+            this.modelsError = err.message;
         } finally {
             this.modelsLoading = false;
             const modelSelector = this.querySelector('model-selector');
-            if (modelSelector && targetProvider) {
-                modelSelector.onModelsLoaded(targetProvider);
-            }
+            modelSelector?.onModelsLoaded?.(targetProvider);
         }
     }
 

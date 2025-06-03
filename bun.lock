@@ -8,6 +8,7 @@
         "lit": "^3.3.0",
         "lit-css-loader": "^3.0.1",
         "ollama": "^0.5.16",
+        "openai": "^5.0.2",
         "remark-gfm": "^4.0.1",
         "remark-parse": "^11.0.0",
         "sass": "^1.89.1",
@@ -367,6 +368,8 @@
     "nth-check": ["nth-check@2.1.1", "", { "dependencies": { "boolbase": "^1.0.0" } }, "sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w=="],
 
     "ollama": ["ollama@0.5.16", "", { "dependencies": { "whatwg-fetch": "^3.6.20" } }, "sha512-OEbxxOIUZtdZgOaTPAULo051F5y+Z1vosxEYOoABPnQKeW7i4O8tJNlxCB+xioyoorVqgjkdj+TA1f1Hy2ug/w=="],
+
+    "openai": ["openai@5.0.2", "", { "peerDependencies": { "ws": "^8.18.0", "zod": "^3.23.8" }, "optionalPeers": ["ws", "zod"], "bin": { "openai": "bin/cli" } }, "sha512-NN7LAAImgBmd4RIe6WyRpLmwCbn+HQ1iaXeIG7K9DM3Auy/G2waKFhrDfRgaEeY0UUPnm6nohaCsqcS+zO8+2g=="],
 
     "picocolors": ["picocolors@1.1.1", "", {}, "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="],
 

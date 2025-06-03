@@ -27,6 +27,7 @@
     "lit": "^3.3.0",
     "lit-css-loader": "^3.0.1",
     "ollama": "^0.5.16",
+    "openai": "^5.0.2",
     "remark-gfm": "^4.0.1",
     "remark-parse": "^11.0.0",
     "sass": "^1.89.1",
