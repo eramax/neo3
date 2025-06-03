@@ -56,16 +56,20 @@ export class AIProvider {
     }
 
     async generateTitle(userMessage, model) {
-        const instructions = "Generate a short, descriptive title for this conversation in exactly 7 words or fewer. Do not use any thinking tags or markdown formatting. Just respond with the title directly.";
+        const instructions = "Generate a short, descriptive title for this user request in exactly 7 words or less. Do not think or reason and don't return markdown formatting. Just respond with the title directly.";
         let title = 'New Chat';
         try {
-            const response = await this.client.responses.create({
+            const response = await this.client.chat.completions.create({
                 model,
-                instructions,
-                input: userMessage
+                reasoning_effort: "low",
+                messages: [
+                    { role: 'system', content: instructions },
+                    { role: 'user', content: userMessage }
+                ],
+                stream: false
             });
 
-            const content = response.content || '';
+            const content = response.choices[0]?.message?.content || '';
             console.log('Title generation response:', content);
             const cleaned = content.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
                 .replace(/<\/?answer>/gi, '').replace(/[*_`#\[\]()]/g, '').trim()
