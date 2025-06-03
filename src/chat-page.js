@@ -109,6 +109,16 @@ export class ChatPage extends LitElement {
 
     async sendMessage() {
         if (!this.message.trim() || this.isStreaming) return;
+
+        // Auto-create chat if none exists
+        if (!this.currentChatId || this.isNewChat) {
+            const newChatId = this.app.createChat();
+            this.chats = this.app.getChats();
+            this.navigateToChat(newChatId);
+            // Wait for navigation to complete
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+
         const userMessage = this.message;
         this.message = "";
         const userMsg = {

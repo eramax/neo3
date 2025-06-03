@@ -255,3 +255,9 @@
 - **Changed:** Switched from chat completions to responses API for title generation
 - **Reason:** Use specialized responses API with instructions/input format
 - **Impact:** Simplified API call structure and potentially better response handling
+
+## [2024-12-19] - Auto Chat Creation
+
+- **Changed:** Modified sendMessage() to automatically create and navigate to new chat when no active chat exists
+- **Reason:** Improve UX by eliminating need to manually create chat before sending first message
+- **Impact:** Streamlined user workflow, reduced friction in starting conversations
