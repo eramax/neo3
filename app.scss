@@ -1,5 +1,5 @@
 .mermaid-container {
-  background: #0f172a;
+  background: linear-gradient(135deg, #0f172a 0%, #1a1a2e 100%);
   border: 1px solid #1e293b;
   border-radius: 12px;
   padding: 20px;
@@ -7,10 +7,11 @@
   text-align: center;
   min-height: 80px;
   cursor: pointer;
-  transition: box-shadow 0.2s ease;
+  transition: all 0.3s ease;
 
   &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 16px rgba(74, 158, 255, 0.1);
+    border-color: #4a9eff;
   }
 
   svg {
@@ -23,64 +24,90 @@
     .node ellipse,
     .node polygon,
     .node path {
-      fill: #1e293b !important;
-      stroke: #475569 !important;
-      stroke-width: 1.5px !important;
+      fill: #1a1a2e;
+      stroke: #4a9eff;
+      stroke-width: 1.5px;
+      filter: drop-shadow(0 0 6px rgba(74, 158, 255, 0.2));
     }
 
     .edgePath .path,
     .flowchart-link {
-      stroke: #64748b !important;
-      stroke-width: 2px !important;
+      stroke: #64748b;
+      stroke-width: 2px;
+      stroke-dasharray: 8, 4;
+      animation: flowMove 3s linear infinite;
     }
 
     .arrowheadPath,
     marker path {
-      fill: #64748b !important;
-      stroke: #64748b !important;
+      fill: #4a9eff;
+      stroke: #4a9eff;
+      animation: arrowPulse 2s ease-in-out infinite;
     }
 
     text,
     .label,
     .nodeLabel,
     .edgeLabel {
-      fill: #e2e8f0 !important;
-      color: #e2e8f0 !important;
-      font-weight: 500 !important;
+      fill: #d1d5db;
+      color: #d1d5db;
+      font-weight: 400;
+    }
+
+    .edgeLabel {
+      background-color: rgba(26, 26, 46, 0.85);
+      border-radius: 4px;
+      padding: 2px 6px;
     }
 
     .cluster rect {
-      fill: #1e293b !important;
-      stroke: #475569 !important;
-      stroke-width: 1px !important;
+      fill: rgba(30, 41, 59, 0.4);
+      stroke: #374151;
+      stroke-width: 1px;
+      stroke-dasharray: 5, 5;
     }
 
     .actor {
-      fill: #1e293b !important;
-      stroke: #475569 !important;
+      fill: #1a1a2e;
+      stroke: #4a9eff;
+      stroke-width: 1.5px;
     }
 
     .messageText,
     .noteText,
     text.actor {
-      fill: #e2e8f0 !important;
-      font-weight: 500 !important;
+      fill: #d1d5db;
+      font-weight: 400;
     }
 
     .messageLine0,
     .messageLine1 {
-      stroke: #64748b !important;
-      stroke-width: 1.5px !important;
+      stroke: #64748b;
+      stroke-width: 1.5px;
+      stroke-dasharray: 6, 3;
+      animation: flowMove 4s linear infinite;
     }
+  }
+}
 
-    .sequenceNumber {
-      fill: #e2e8f0 !important;
-    }
+@keyframes flowMove {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 12;
+  }
+}
 
-    .loopText,
-    .loopText tspan {
-      fill: #e2e8f0 !important;
-    }
+@keyframes arrowPulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
   }
 }
 
@@ -98,8 +125,8 @@
     content: "";
     width: 16px;
     height: 16px;
-    border: 2px solid #64748b;
-    border-top: 2px solid transparent;
+    border: 2px solid #374151;
+    border-top: 2px solid #4a9eff;
     border-radius: 50%;
     animation: spin 1s linear infinite;
   }
@@ -119,8 +146,8 @@
 }
 
 .mermaid-error-container {
-  background: #1e1b2e;
-  border: 1px solid #3c2a4a;
+  background: linear-gradient(135deg, #1e1b2e 0%, #2d1b2e 100%);
+  border: 1px solid #5b21b6;
   border-radius: 8px;
 }
 
@@ -132,14 +159,23 @@
     margin: 0 0 12px 0;
     font-weight: 600;
     font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &::before {
+      content: "⚠";
+      font-size: 16px;
+      color: #fbbf24;
+    }
   }
 
   pre {
-    background: #0c0a14;
-    border: 1px solid #1e293b;
-    border-radius: 8px;
+    background: linear-gradient(135deg, #0c0a14 0%, #1a0f1a 100%);
+    border: 1px solid #374151;
+    border-radius: 6px;
     padding: 12px;
-    font-size: 13px;
+    font-size: 12px;
     color: #94a3b8;
     overflow-x: auto;
     text-align: left;

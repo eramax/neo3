@@ -41,3 +41,5 @@
 - User wants to add Mermaid diagram support for code blocks with ```mermaid syntax
 - User wants to fix Mermaid diagram rendering issue where diagrams showed loading but never rendered
 - User wants to fix Mermaid diagram light colors by implementing proper dark mode theming with CSS overrides and theme variables
+- User wants to enhance Mermaid diagrams with better dark mode colors and animated effects on arrows and flows
+- User wants to remove !important declarations and fix element positioning with dimmed colors and flowing pulse animations on arrows
