@@ -26,3 +26,9 @@
 - User wants to fix custom tag extension to prevent other nodes from rendering while custom tag is not finished
 - User wants to fix nested custom tags by updating content div directly instead of re-rendering entire element
 - User wants to fix remark-prism browser compatibility error by replacing with custom syntax highlighting plugin
+- User wants to fix Prism syntax highlighting to support multiple programming languages beyond JavaScript
+- User wants to fix Prism import errors by using correct component names and adding language mapping fallbacks
+- User wants to fix Prism language component dependency loading errors by implementing async loading with proper order
+- User wants to fix Go code block highlighting by switching to synchronous Prism language imports and adding golang alias
+- User wants to fix syntax highlighting not working for any languages by adding debugging and improving highlighting logic
+- User wants to fix Prism tokenizePlaceholders error by removing problematic language imports that cause dependency conflicts

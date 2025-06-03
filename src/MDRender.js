@@ -3,6 +3,21 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import Prism from "prismjs";
+import "prismjs/components/prism-clike";
+import "prismjs/components/prism-c";
+import "prismjs/components/prism-cpp";
+import "prismjs/components/prism-java";
+import "prismjs/components/prism-csharp";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-go";
+import "prismjs/components/prism-rust";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-css";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-yaml";
+import "prismjs/components/prism-markup";
+import "prismjs/components/prism-bash";
+import "prismjs/components/prism-sql";
 import katex from "katex";
 import { visit } from "unist-util-visit";
 
@@ -25,20 +40,30 @@ const UPDATABLE_NODE_TYPES = new Set([
 
 const remarkSyntaxHighlight = () => (tree) => {
     visit(tree, 'code', (node) => {
-        const lang = node.lang;
-        if (lang && Prism.languages[lang]) {
+        const lang = node.lang?.toLowerCase()
+        const langMap = {
+            'html': 'markup',
+            'xml': 'markup',
+            'js': 'javascript',
+            'ts': 'typescript',
+            'py': 'python',
+            'sh': 'bash',
+            'golang': 'go'
+        }
+
+        const actualLang = langMap[lang] || lang
+
+        if (actualLang && Prism.languages[actualLang]) {
             try {
-                node.data = node.data || {};
-                node.data.hProperties = node.data.hProperties || {};
-                node.data.hProperties.className = [`language-${lang}`];
-                node.highlighted = Prism.highlight(node.value, Prism.languages[lang], lang);
+                const highlighted = Prism.highlight(node.value, Prism.languages[actualLang], actualLang)
+                node.highlighted = highlighted
             } catch (err) {
-                node.highlighted = node.value;
+                node.highlighted = node.value
             }
         } else {
-            node.highlighted = node.value;
+            node.highlighted = node.value
         }
-    });
+    })
 };
 
 // Remark Custom Tag Extension
@@ -542,18 +567,19 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     createCodeBlockHTML(node) {
-        const language = this.escapeHtml(node.lang) || "plaintext";
-        const highlightedCode = node.highlighted || this.escapeHtml(node.value);
+        const language = node.lang || "plaintext"
+        const escapedLanguage = this.escapeHtml(language)
+        const codeContent = node.highlighted || this.escapeHtml(node.value)
 
         return `
             <div class="code-block-container">
                 <div class="code-block-header">
-                    <span class="code-language">${language}</span>
+                    <span class="code-language">${escapedLanguage}</span>
                     <button class="copy-code-btn">
                         ${this.copyIcon}<span class="copy-text"/>
                     </button>
                 </div>
-                <pre class="code-block"><code class="language-${language}">${highlightedCode}</code></pre>
+                <pre class="code-block"><code class="language-${escapedLanguage}">${codeContent}</code></pre>
             </div>
         `;
     }
