@@ -22,11 +22,11 @@
     "vite": "^6.3.5"
   },
   "dependencies": {
-    "highlight.js": "^11.11.1",
     "katex": "^0.16.22",
     "lit": "^3.3.0",
     "lit-css-loader": "^3.0.1",
     "openai": "^5.0.2",
+    "prismjs": "^1.30.0",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",

@@ -2,7 +2,7 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import hljs from "highlight.js";
+import Prism from "prismjs";
 import katex from "katex";
 
 // Constants
@@ -265,7 +265,7 @@ export class IncrementalMarkdown extends HTMLElement {
             languageSpan.textContent = language;
 
             if (codeElement) {
-                codeElement.className = `hljs language-${this.escapeHtml(language)}`;
+                codeElement.className = `language-${this.escapeHtml(language)}`;
             }
         }
     }
@@ -425,7 +425,7 @@ export class IncrementalMarkdown extends HTMLElement {
                         ${this.copyIcon}<span class="copy-text"/>
                     </button>
                 </div>
-                <pre class="code-block"><code class="hljs language-${this.escapeHtml(language)}">${highlightedCode}</code></pre>
+                <pre class="code-block"><code class="language-${this.escapeHtml(language)}">${highlightedCode}</code></pre>
             </div>
         `;
     }
@@ -448,15 +448,29 @@ export class IncrementalMarkdown extends HTMLElement {
     highlightCode(code, language) {
         const trimmedCode = code.trim();
 
-        if (language && hljs.getLanguage(language)) {
+        if (language && Prism.languages[language]) {
             try {
-                return hljs.highlight(trimmedCode, { language }).value;
+                return Prism.highlight(trimmedCode, Prism.languages[language], language);
             } catch (err) {
-                console.warn("Highlighting failed:", err);
+                console.warn("Prism highlighting failed:", err);
             }
         }
 
-        return hljs.highlightAuto(trimmedCode).value;
+        // Smart fallback - try common languages
+        const commonLangs = ['javascript', 'python', 'html', 'css', 'json'];
+        for (const lang of commonLangs) {
+            if (Prism.languages[lang]) {
+                try {
+                    const highlighted = Prism.highlight(trimmedCode, Prism.languages[lang], lang);
+                    return highlighted;
+                } catch (err) {
+                    continue;
+                }
+            }
+        }
+
+        // Return escaped plain text if no highlighting works
+        return this.escapeHtml(trimmedCode);
     }
 
     renderMath(expression, displayMode = false) {

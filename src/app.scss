@@ -1274,45 +1274,92 @@ body {
     width: max-content;
     min-width: 100%;
     box-sizing: border-box;
-  } // Syntax highlighting
-  .content .hljs-keyword {
-    color: #ff7b72;
-  }
-
-  .content .hljs-string {
-    color: #a5d6ff;
-  }
-
-  .content .hljs-comment {
+  } // Syntax highlighting - Updated for Prism.js
+  .content .token.comment,
+  .content .token.prolog,
+  .content .token.doctype,
+  .content .token.cdata {
     color: #8b949e;
   }
 
-  .content .hljs-function {
+  .content .token.punctuation {
+    color: #c9d1d9;
+  }
+
+  .content .token.property,
+  .content .token.tag,
+  .content .token.boolean,
+  .content .token.number,
+  .content .token.constant,
+  .content .token.symbol,
+  .content .token.deleted {
+    color: #79c0ff;
+  }
+
+  .content .token.selector,
+  .content .token.attr-name,
+  .content .token.string,
+  .content .token.char,
+  .content .token.builtin,
+  .content .token.inserted {
+    color: #a5d6ff;
+  }
+
+  .content .token.operator,
+  .content .token.entity,
+  .content .token.url,
+  .content .language-css .token.string,
+  .content .style .token.string {
+    color: #c9d1d9;
+  }
+
+  .content .token.atrule,
+  .content .token.attr-value,
+  .content .token.keyword {
+    color: #ff7b72;
+  }
+
+  .content .token.function,
+  .content .token.class-name {
     color: #d2a8ff;
   }
 
-  .content .hljs-variable {
+  .content .token.regex,
+  .content .token.important,
+  .content .token.variable {
     color: #ffa657;
   }
 
-  .content .hljs-number {
+  .content .token.important,
+  .content .token.bold {
+    font-weight: bold;
+  }
+
+  .content .token.italic {
+    font-style: italic;
+  }
+
+  .content .token.entity {
+    cursor: help;
+  }
+
+  // Language-specific highlighting
+  .content .token.namespace {
+    opacity: 0.7;
+  }
+
+  .content .language-json .token.property {
     color: #79c0ff;
   }
 
-  .content .hljs-built_in {
-    color: #ffa657;
+  .content .language-json .token.string {
+    color: #a5d6ff;
   }
 
-  .content .hljs-literal {
-    color: #79c0ff;
-  }
-
-  .content .hljs-title {
-    color: #d2a8ff;
-  }
-
-  .content .hljs-attr {
-    color: #79c0ff;
+  .content .language-markup .token.tag,
+  .content .language-markup .token.attr-name,
+  .content .language-markup .token.punctuation {
+    color: #ff7b72;
   }
 
   // Input area
