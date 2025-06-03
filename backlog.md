@@ -243,3 +243,15 @@
 - **Changed:** Fixed AIProvider initialization to use correct URL configuration
 - **Reason:** Ollama was incorrectly using OpenAI's endpoint instead of its own API
 - **Impact:** Proper model loading for each provider, consistent parameter naming across worker communication
+
+## [2024-12-19] - Scrollbar Styling Fix
+
+- **Changed:** Moved scrollbar styles from .main-content scope to global scope in app.scss
+- **Reason:** Sidebar scrollbar was not inheriting dark mode styling, only main content area had proper dark scrollbars
+- **Impact:** Consistent dark mode scrollbar appearance across entire application (sidebar and main content)
+
+## [2024-01-XX] - AI Provider Title Generation API Update
+
+- **Changed:** Switched from chat completions to responses API for title generation
+- **Reason:** Use specialized responses API with instructions/input format
+- **Impact:** Simplified API call structure and potentially better response handling

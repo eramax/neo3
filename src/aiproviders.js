@@ -11,7 +11,7 @@ export class AIProvider {
         this.client = new OpenAI({
             apiKey: this.config.apiKey || 'dummy',
             baseURL: this.config.url || this.config.host, // Fix: use url from config, fallback to host
-            dangerouslyAllowBrowser: true
+            dangerouslyAllowBrowser: true,
         });
     }
 
@@ -56,15 +56,21 @@ export class AIProvider {
     }
 
     async generateTitle(userMessage, model) {
-        const prompt = "Generate a short, descriptive title for this conversation in exactly 7 words or fewer. Do not use any thinking tags or markdown formatting. Just respond with the title directly:";
+        const instructions = "Generate a short, descriptive title for this conversation in exactly 7 words or fewer. Do not use any thinking tags or markdown formatting. Just respond with the title directly.";
         let title = 'New Chat';
         try {
-            for await (const chunk of this.chat(model, [{ role: 'user', content: `${prompt} "${userMessage}"` }])) {
-                const cleaned = chunk.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
-                    .replace(/<\/?answer>/gi, '').replace(/[*_`#\[\]()]/g, '').trim()
-                    .split(/\s+/).filter(w => w.length).slice(0, 7).join(' ');
-                if (cleaned) title = cleaned;
-            }
+            const response = await this.client.responses.create({
+                model,
+                instructions,
+                input: userMessage
+            });
+
+            const content = response.content || '';
+            console.log('Title generation response:', content);
+            const cleaned = content.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
+                .replace(/<\/?answer>/gi, '').replace(/[*_`#\[\]()]/g, '').trim()
+                .split(/\s+/).filter(w => w.length).slice(0, 7).join(' ');
+            if (cleaned) title = cleaned;
         } catch { }
         return title || 'New Chat';
     }
@@ -104,6 +110,17 @@ export class OllamaProvider extends AIProvider {
 }
 
 export class OpenAIProvider extends AIProvider {
+    async initClient() {
+        this.client = new OpenAI({
+            apiKey: this.config.apiKey || 'dummy',
+            baseURL: this.config.url || this.config.host, // Fix: use url from config, fallback to host
+            dangerouslyAllowBrowser: true,
+            defaultHeaders: {
+                "HTTP-Referer": "https://neo3.vercel.app/", // Optional: Your site URL for rankings
+                "X-Title": "neo3", // This sets your app name
+            },
+        });
+    }
     formatModels(models) {
         return models.filter(m => m.id.includes('gpt')).map(model => ({
             id: model.id,
