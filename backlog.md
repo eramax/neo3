@@ -279,3 +279,9 @@
 - **Changed:** Removed ollamaUrl property and related methods from core.js and chat-page.js
 - **Reason:** All providers now handle their own URL configuration consistently, making special Ollama URL treatment redundant
 - **Impact:** Cleaner code architecture with unified provider configuration system
+
+## [2024-12-19] - Provider Configuration Refactor
+
+- **Changed:** Moved getProviders logic to aiproviders.js, updated core.js to use AIProvider methods
+- **Reason:** Centralize provider configuration while keeping localStorage in core.js
+- **Impact:** Better code organization, cleaner separation of concerns, eliminated code duplication

@@ -82,6 +82,22 @@ export class AIProvider {
         } catch { }
         return title || 'New Chat';
     }
+
+    static getProviders(storedProviders = {}) {
+        const defaultProviders = {
+            ollama: { name: 'Ollama', url: 'http://localhost:11434', apiKey: '', requiresApiKey: false },
+            openai: { name: 'OpenAI', url: 'https://api.openai.com/v1', apiKey: '', requiresApiKey: true },
+            openrouter: { name: 'OpenRouter', url: 'https://openrouter.ai/api/v1', apiKey: '', requiresApiKey: true },
+            deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', apiKey: '', requiresApiKey: true },
+            anthropic: { name: 'Anthropic', url: 'https://api.anthropic.com/v1', apiKey: '', requiresApiKey: true },
+            google: { name: 'Google AI', url: 'https://generativelanguage.googleapis.com/v1', apiKey: '', requiresApiKey: true }
+        };
+        return { ...defaultProviders, ...storedProviders };
+    }
+
+    static mergeProviderConfig(providers, providerId, config) {
+        return { ...providers, [providerId]: { ...providers[providerId], ...config } };
+    }
 }
 
 export class OllamaProvider extends AIProvider {

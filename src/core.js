@@ -1,4 +1,6 @@
 // Optimized core app class
+import { AIProvider } from './aiproviders.js';
+
 export class ChatApp {
     constructor() {
         this.worker = new Worker(new URL('./neo-worker.js', import.meta.url), { type: 'module' });
@@ -223,21 +225,13 @@ export class ChatApp {
     }
 
     getProviders() {
-        const defaultProviders = {
-            ollama: { name: 'Ollama', url: 'http://localhost:11434', apiKey: '', requiresApiKey: false },
-            openai: { name: 'OpenAI', url: 'https://api.openai.com/v1', apiKey: '', requiresApiKey: true },
-            openrouter: { name: 'OpenRouter', url: 'https://openrouter.ai/api/v1', apiKey: '', requiresApiKey: true },
-            deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', apiKey: '', requiresApiKey: true },
-            anthropic: { name: 'Anthropic', url: 'https://api.anthropic.com/v1', apiKey: '', requiresApiKey: true },
-            google: { name: 'Google AI', url: 'https://generativelanguage.googleapis.com/v1', apiKey: '', requiresApiKey: true }
-        };
-        return { ...defaultProviders, ...this.load('providers', {}) };
+        return AIProvider.getProviders(this.load('providers', {}));
     }
 
     async saveProviderConfig(providerId, config) {
-        const providers = this.getProviders();
-        providers[providerId] = { ...providers[providerId], ...config };
-        this.save('providers', providers);
+        const currentProviders = this.load('providers', {});
+        const updatedProviders = AIProvider.mergeProviderConfig(currentProviders, providerId, config);
+        this.save('providers', updatedProviders);
 
         if (providerId === this.getStoredProvider()) {
             this.initialized = false;
