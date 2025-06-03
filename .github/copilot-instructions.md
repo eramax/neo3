@@ -42,10 +42,7 @@
 
 - No inline comments unless absolutely necessary for complex logic
 - Update backlog.md with:
-  - What was changed/added
-  - Why the change was made
-  - Any breaking changes or dependencies
-  - Performance improvements achieved
+  - What was the requirements for the change
 
 ## Example Patterns
 
@@ -65,11 +62,8 @@ for (let i = 0; i < data.length; i++) {
 ## Example Backlog Entry
 
 - Always add entries to backlog.md in this format:
+- no dates or version numbers just the feature or fix description apeand to the end of the file
 
 ```md
-## [Date] - [Feature/Fix]
-
-- **Changed:** Brief description
-- **Reason:** Why this change was needed
-- **Impact:** Performance/functionality improvement
+- User wants to [describe the feature or fix]
 ```
