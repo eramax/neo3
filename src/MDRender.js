@@ -85,9 +85,7 @@ export class IncrementalMarkdown extends HTMLElement {
     // Content preprocessing
     _preprocessContent(value) {
         return value;
-    }
-
-    // Event handling
+    }    // Event handling
     _setupEventListeners() {
         this._container.addEventListener('click', (event) => {
             const thinkHeader = event.target.closest('.think-header');
@@ -103,6 +101,26 @@ export class IncrementalMarkdown extends HTMLElement {
                 const codeElement = copyButton.closest('.code-block-container')?.querySelector('pre code');
                 if (codeElement && window.copyCodeToClipboard) {
                     window.copyCodeToClipboard(copyButton, codeElement.textContent);
+                }
+            } const previewButton = event.target.closest('.preview-btn');
+            if (previewButton) {
+                const container = previewButton.closest('.code-block-container');
+                const codeElement = container?.querySelector('pre code');
+                const mermaidCode = codeElement?.textContent;
+
+                if (mermaidCode) {
+                    let previewDiv = container.querySelector('.mermaid-preview-popup');
+                    if (previewDiv) {
+                        previewDiv.remove();
+                        return;
+                    }
+
+                    previewDiv = document.createElement('div');
+                    previewDiv.className = 'mermaid-preview-popup';
+                    previewDiv.innerHTML = '<div class="mermaid-loading">Rendering diagram...</div>';
+                    container.appendChild(previewDiv);
+
+                    renderMermaidDiagram(mermaidCode, previewDiv);
                 }
             }
         });
@@ -145,10 +163,6 @@ export class IncrementalMarkdown extends HTMLElement {
 
         const html = this.htmlGenerators.createHTMLFromNode(newNode);
         const element = this._createElementFromHTML(html);
-
-        if (element && isMermaidCode(newNode)) {
-            setTimeout(() => renderMermaidDiagram(newNode.value, element), 0);
-        }
 
         return element;
     }
@@ -286,16 +300,7 @@ export class IncrementalMarkdown extends HTMLElement {
     _updateHtmlNode(element, newNode) {
         element.innerHTML = newNode.value;
         return true;
-    }
-
-    _updateCodeBlock(element, newNode, oldNode) {
-        if (isMermaidCode(newNode)) {
-            if (newNode.value !== oldNode.value) {
-                renderMermaidDiagram(newNode.value, element);
-            }
-            return;
-        }
-
+    } _updateCodeBlock(element, newNode, oldNode) {
         const codeElement = element.querySelector('pre code');
         const languageSpan = element.querySelector('.code-language');
 
@@ -366,9 +371,6 @@ export class IncrementalMarkdown extends HTMLElement {
             const html = this.htmlGenerators.createHTMLFromNode(newChild);
             const newElement = this._createElementFromHTML(html);
             if (newElement) {
-                if (isMermaidCode(newChild)) {
-                    setTimeout(() => renderMermaidDiagram(newChild.value, newElement), 0);
-                }
                 existingChild ? element.replaceChild(newElement, existingChild) : element.appendChild(newElement);
             }
         }

@@ -32,18 +32,17 @@ const loadMermaid = async () => {
     return mermaidInstance = mermaid;
 };
 
-export const renderMermaidDiagram = async (code, container) => {
+export const renderMermaidDiagram = async (code, previewDiv) => {
     const mermaid = await loadMermaid();
     const id = `mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    container.innerHTML = '<div class="mermaid-loading">Rendering diagram...</div>';
+    previewDiv.innerHTML = '<div class="mermaid-loading">Rendering diagram...</div>';
 
     try {
         const { svg } = await mermaid.render(id, code.trim());
-        container.innerHTML = svg;
-        container.classList.add('mermaid-rendered');
+        previewDiv.innerHTML = svg;
     } catch (err) {
-        //container.innerHTML = `<div class="mermaid-error-container"><div class="mermaid-error"><p>Invalid Mermaid diagram: ${err.message || 'Syntax error'}</p><pre>${code}</pre></div></div>`;
+        previewDiv.innerHTML = `<div class="mermaid-error-container"><div class="mermaid-error"><p>Invalid Mermaid diagram: ${err.message || 'Syntax error'}</p></div></div>`;
     }
 };
 

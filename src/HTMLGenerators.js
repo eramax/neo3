@@ -69,17 +69,18 @@ export class HTMLGenerators {
         return generator ? generator(node) : (node.children ? this.createHTMLFromChildren(node.children) : '');
     }
 
-    createHTMLFromChildren = children => children?.map(child => this.createHTMLFromNode(child)).join('') || '';
-
-    createCodeBlockHTML(node) {
+    createHTMLFromChildren = children => children?.map(child => this.createHTMLFromNode(child)).join('') || ''; createCodeBlockHTML(node) {
         const language = node.lang || "plaintext";
         const escapedLanguage = this.escapeHtml(language);
         const codeContent = node.highlighted || this.escapeHtml(node.value);
 
-        return `<div class="code-block-container"><div class="code-block-header"><span class="code-language">${escapedLanguage}</span><button class="copy-code-btn">${COPY_ICON_SVG}<span class="copy-text"/></button></div><pre class="code-block"><code class="language-${escapedLanguage}">${codeContent}</code></pre></div>`;
+        const isMermaid = language.toLowerCase() === 'mermaid';
+        const previewButton = isMermaid ? `<button class="preview-btn">${COPY_ICON_SVG}<span class="preview-text">Preview</span></button>` : '';
+
+        return `<div class="code-block-container"><div class="code-block-header"><span class="code-language">${escapedLanguage}</span>${previewButton}<button class="copy-code-btn">${COPY_ICON_SVG}<span class="copy-text"/></button></div><pre class="code-block"><code class="language-${escapedLanguage}">${codeContent}</code></pre></div>`;
     }
 
-    createMermaidHTML = node => `<div class="mermaid-container" data-mermaid-code="${this.escapeHtml(node.value)}"><div class="mermaid-loading">Loading diagram...</div></div>`;
+    createMermaidHTML = node => this.createCodeBlockHTML(node);
 
     createCustomTagHTML(node) {
         const config = this.customTags.get(node.tagName);

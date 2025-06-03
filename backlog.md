@@ -49,3 +49,7 @@
 - User wants to optimize Mermaid validation to avoid parsing code twice
 - User wants to optimize rendering performance by caching operations, reducing DOM queries, and streamlining code generation
 - User wants to fix Mermaid error styling positioning and size issues
+- User wants to add Mermaid preview toggle button that switches between code view and rendered diagram view
+- User wants to show Mermaid code by default instead of preview when first rendered
+- User wants to only parse and render Mermaid diagrams when the user clicks the Preview button, not automatically
+- User wants to simplify Mermaid implementation to just add a Preview button beside Copy button for Mermaid code blocks

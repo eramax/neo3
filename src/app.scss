@@ -1708,11 +1708,7 @@ body {
   background: #181a20;
   border: 1px solid #23272e;
   border-radius: 12px;
-  padding: 20px;
   margin: 20px 0;
-  text-align: center;
-  min-height: 80px;
-  cursor: pointer;
   transition: all 0.3s ease;
 
   &:hover {
@@ -1720,84 +1716,90 @@ body {
     border-color: #334155;
   }
 
-  svg {
-    max-width: 100%;
-    height: auto;
-    background: #181a20;
+  .mermaid-header {
+    background: #23272e;
+    border-bottom: 1px solid #2d3748;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 11px 11px 0 0;
 
-    * {
-      color: #cbd5e1;
+    .code-language {
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
     }
 
-    rect,
-    circle,
-    ellipse,
-    polygon {
-      fill: #23272e;
-      stroke: #334155;
-      stroke-width: 1.5px;
-      transition: fill 0.3s, stroke 0.3s, filter 0.3s;
+    .mermaid-toggle-btn {
+      background: transparent;
+      border: 1px solid #374151;
+      color: #94a3b8;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: #374151;
+        color: #cbd5e1;
+      }
+
+      svg {
+        width: 12px;
+        height: 12px;
+      }
+    }
+  }
+
+  .mermaid-content {
+    padding: 16px;
+
+    .mermaid-code {
+      background: #1a1b1c;
+      border-radius: 6px;
+      margin: 0;
+
+      code {
+        background: transparent;
+        color: #cbd5e1;
+        font-size: 13px;
+        line-height: 1.4;
+      }
     }
 
-    text {
-      fill: #cbd5e1;
-      color: #cbd5e1;
-      transition: fill 0.3s;
-    }
+    .mermaid-preview {
+      text-align: center;
+      min-height: 80px;
 
-    .node:hover rect,
-    .node:hover circle,
-    .node:hover ellipse,
-    .node:hover polygon {
-      fill: #1e293b;
-      stroke: #64748b;
-      filter: drop-shadow(0 0 6px #64748b);
-    }
+      svg {
+        max-width: 100%;
+        height: auto;
+        background: #181a20;
 
-    .node:hover text {
-      fill: #e2e8f0;
-    }
+        * {
+          color: #cbd5e1;
+        }
 
-    path {
-      stroke: #475569;
-    }
+        rect,
+        circle,
+        ellipse,
+        polygon {
+          fill: #23272e;
+          stroke: #334155;
+          stroke-width: 1.5px;
+        }
 
-    .edgePath .path,
-    .flowchart-link,
-    path {
-      stroke: #475569;
-      stroke-width: 2px;
-      stroke-dasharray: 6, 3;
-      animation: flowPulse 2s linear infinite;
-      transition: stroke 0.3s, filter 0.3s;
-    }
-
-    .edgePath:hover .path,
-    .flowchart-link:hover,
-    path:hover {
-      stroke: #38bdf8;
-      filter: drop-shadow(0 0 4px #38bdf8);
-      stroke-width: 3px;
-    }
-
-    .arrowheadPath,
-    marker path {
-      fill: #cbd5e1;
-      stroke: #cbd5e1;
-      animation: arrowPulse 2s ease-in-out infinite;
-    }
-
-    .cluster rect {
-      fill: #23272e;
-      stroke: #334155;
-      stroke-dasharray: 5, 5;
-    }
-
-    .messageLine0,
-    .messageLine1 {
-      stroke: #475569;
-      stroke-dasharray: 6, 3;
-      animation: flowMove 4s linear infinite;
+        text {
+          fill: #cbd5e1;
+          color: #cbd5e1;
+        }
+      }
     }
   }
 }
@@ -1952,4 +1954,67 @@ body {
 
 .think-content.hidden {
   display: none;
+}
+
+// Utility classes
+.hidden {
+  display: none !important;
+}
+
+.preview-btn {
+  background: transparent;
+  border: 1px solid #374151;
+  color: #94a3b8;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #374151;
+    color: #cbd5e1;
+  }
+
+  svg {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.mermaid-preview-popup {
+  background: #181a20;
+  border: 1px solid #23272e;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+  text-align: center;
+  min-height: 80px;
+
+  svg {
+    max-width: 100%;
+    height: auto;
+    background: #181a20;
+
+    * {
+      color: #cbd5e1;
+    }
+
+    rect,
+    circle,
+    ellipse,
+    polygon {
+      fill: #23272e;
+      stroke: #334155;
+      stroke-width: 1.5px;
+    }
+
+    text {
+      fill: #cbd5e1;
+      color: #cbd5e1;
+    }
+  }
 }
