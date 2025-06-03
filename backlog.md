@@ -11,3 +11,4 @@
 - User wants to remove unused neo-worker.js file and cleanup worker references
 - User wants to test refactored application for proper functionality
 - User wants to fix AI message streaming to work async - messages should continue streaming to correct chat when user switches chats and show toast notifications on completion
+- User wants to fix toast styles not applying properly by moving them out of nested selector to root level
