@@ -15,7 +15,6 @@ export default defineConfig({
             output: {
                 manualChunks: {
                     'vendor': ['lit', 'lit-element'],
-                    'ollama': ['ollama/browser']
                 }
             }
         }
