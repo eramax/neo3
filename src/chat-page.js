@@ -11,7 +11,7 @@ export class ChatPage extends LitElement {
         selectedChat: { state: true }, message: { state: true }, selectedModel: { state: true },
         selectedProvider: { state: true }, providers: { state: true }, showModelSelector: { state: true },
         sidebarCollapsed: { state: true }, models: { state: true }, modelsLoading: { state: true },
-        modelsError: { state: true }, ollamaUrl: { state: true }, chats: { state: true },
+        modelsError: { state: true }, chats: { state: true },
         streamingMessage: { state: true }, isStreaming: { state: true }, currentChatId: { state: true },
         currentMessages: { state: true }, currentChat: { state: true }, isNewChat: { state: true },
         newModelMode: { state: true }, newModelUrl: { state: true }, newModelProgress: { state: true },
@@ -28,7 +28,6 @@ export class ChatPage extends LitElement {
             newModelUrl: "", newModelProgress: null, newModelError: null, chats: [],
             connectionStatus: "checking"
         });
-        this.ollamaUrl = this.app.getStoredUrl();
         this.loadChats();
     }
 
@@ -50,7 +49,7 @@ export class ChatPage extends LitElement {
             }
         });
         updateFromUrl();
-    } 
+    }
     async loadModels(providerId = null) {
         const targetProvider = providerId || this.selectedProvider;
         const targetConfig = this.providers[targetProvider];
@@ -171,7 +170,7 @@ export class ChatPage extends LitElement {
 
     handleInput(e) { this.message = e.target.value; }
     toggleSidebar() { this.sidebarCollapsed = !this.sidebarCollapsed; }
-    toggleModelSelector() { this.showModelSelector = !this.showModelSelector; } 
+    toggleModelSelector() { this.showModelSelector = !this.showModelSelector; }
     selectModel(modelId) {
         this.selectedModel = modelId;
         this.showModelSelector = false;

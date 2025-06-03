@@ -273,3 +273,9 @@
 - **Changed:** Added static providerName property to each provider class, use it instead of constructor.name
 - **Reason:** Class names get mangled during code minification causing incorrect provider identification
 - **Impact:** Fixes provider attribute showing as 'sa' or other minified names in production builds
+
+## [2024-12-19] - Remove Legacy ollamaUrl Code
+
+- **Changed:** Removed ollamaUrl property and related methods from core.js and chat-page.js
+- **Reason:** All providers now handle their own URL configuration consistently, making special Ollama URL treatment redundant
+- **Impact:** Cleaner code architecture with unified provider configuration system

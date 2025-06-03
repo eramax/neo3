@@ -192,11 +192,6 @@ export class ChatApp {
             return [...this.messages[chatId]];
         }
         return null;
-    } async saveUrl(url) {
-        this.save('ollamaUrl', url);
-        this.initialized = false; // Reset initialization state
-        this.initPromise = this.initWorker(); // Re-initialize with new URL
-        await this.initPromise;
     }
 
     saveModel(model) {
@@ -217,8 +212,6 @@ export class ChatApp {
 
     getStoredModel() {
         return this.load('selectedModel');
-    } getStoredUrl() {
-        return this.load('ollamaUrl', 'http://localhost:11434');
     }
 
     getStoredProvider() {
