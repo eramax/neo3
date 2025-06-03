@@ -24,3 +24,4 @@
 - User wants to clean up and refactor custom tag extension code by removing unnecessary parts and optimizing implementation
 - User wants to fix custom tag extension to capture all content until tag is closed across multiple HTML nodes
 - User wants to fix custom tag extension to prevent other nodes from rendering while custom tag is not finished
+- User wants to fix nested custom tags by updating content div directly instead of re-rendering entire element

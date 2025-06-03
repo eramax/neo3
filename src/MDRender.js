@@ -30,95 +30,74 @@ const remarkCustomTags = (options = {}) => {
     return (tree) => {
         const nodesToRemove = [];
         let openTag = null;
-        let collectedContent = '';
+        let content = '';
         let startIndex = -1;
         let parentNode = null;
 
         visit(tree, (node, index, parent) => {
             if (node.type === 'html' && parent) {
-                const { value } = node;
-
                 for (const [tagName, config] of registeredTags) {
-                    // Check for opening tag
-                    if (value.includes(`<${tagName}>`)) {
+                    if (node.value.includes(`<${tagName}>`)) {
                         if (!openTag) {
                             openTag = tagName;
-                            collectedContent = value.split(`<${tagName}>`)[1] || '';
+                            content = node.value.split(`<${tagName}>`)[1] || '';
                             startIndex = index;
                             parentNode = parent;
 
-                            // Check if tag closes in same node
-                            if (collectedContent.includes(`</${tagName}>`)) {
-                                const endContent = collectedContent.split(`</${tagName}>`)[0];
+                            if (content.includes(`</${tagName}>`)) {
                                 parent.children[index] = {
                                     type: tagName,
                                     tagName,
-                                    value: endContent.trim(),
+                                    value: content.split(`</${tagName}>`)[0].trim(),
                                     config
                                 };
                                 openTag = null;
-                                collectedContent = '';
                                 return;
                             }
                         }
                     }
 
-                    // Check for closing tag
-                    if (openTag === tagName && value.includes(`</${tagName}>`)) {
-                        const endContent = value.split(`</${tagName}>`)[0];
-                        collectedContent += endContent;
+                    if (openTag === tagName && node.value.includes(`</${tagName}>`)) {
+                        content += node.value.split(`</${tagName}>`)[0];
 
-                        // Replace the start node with custom tag
                         parentNode.children[startIndex] = {
                             type: tagName,
                             tagName,
-                            value: collectedContent.trim(),
+                            value: content.trim(),
                             config
                         };
 
-                        // Mark nodes for removal
                         for (let i = startIndex + 1; i <= index; i++) {
                             nodesToRemove.push({ parent: parentNode, index: i });
                         }
 
                         openTag = null;
-                        collectedContent = '';
                         return;
                     }
                 }
 
-                // Collect content if we're inside an open tag
-                if (openTag) {
-                    collectedContent += value;
-                    if (index !== startIndex) {
-                        nodesToRemove.push({ parent, index });
-                    }
+                if (openTag && index !== startIndex) {
+                    content += node.value;
+                    nodesToRemove.push({ parent, index });
                 }
             } else if (openTag && parent) {
-                const nodeText = node.type === 'text' ? node.value :
-                    node.children ? tree.toString().slice(node.position?.start?.offset || 0, node.position?.end?.offset || 0) : '';
-
-                collectedContent += nodeText;
+                const nodeText = node.type === 'text' ? node.value : '';
+                content += nodeText;
                 nodesToRemove.push({ parent, index });
             }
         });
 
-        // Handle unclosed tags
         if (openTag && parentNode) {
-            const config = registeredTags.get(openTag);
             parentNode.children[startIndex] = {
                 type: openTag,
                 tagName: openTag,
-                value: collectedContent.trim(),
-                config
+                value: content.trim(),
+                config: registeredTags.get(openTag)
             };
         }
 
-        // Remove collected nodes (in reverse order to maintain indices)
         nodesToRemove.reverse().forEach(({ parent, index }) => {
-            if (parent.children[index]) {
-                parent.children.splice(index, 1);
-            }
+            parent.children.splice(index, 1);
         });
     };
 };
@@ -340,7 +319,12 @@ export class IncrementalMarkdown extends HTMLElement {
     _updateCustomTag(element, newNode, oldNode) {
         const config = this.customTags.get(newNode.tagName);
         if (config && newNode.value !== oldNode?.value) {
-            element.innerHTML = config.renderer(newNode.value);
+            const contentDiv = element.querySelector('.think-content');
+            if (contentDiv) {
+                contentDiv.textContent = newNode.value;
+            } else {
+                element.innerHTML = config.renderer(newNode.value);
+            }
         }
         return true;
     }
@@ -370,15 +354,7 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     _updateHtmlNode(element, newNode) {
-        if (newNode.value.includes("<think>")) {
-            const content = newNode.value.replace(/<\/?think>/g, "");
-            const contentDiv = element.querySelector('.think-content');
-            if (contentDiv) {
-                contentDiv.innerHTML = content;
-            }
-        } else {
-            element.innerHTML = newNode.value;
-        }
+        element.innerHTML = newNode.value;
         return true;
     }
 
