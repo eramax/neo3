@@ -1,43 +1,94 @@
 import { LitElement, html } from 'lit';
 import { ChatApp } from "./core.js";
+import { globalState } from './global-state.js';
+import { Utils } from './utils.js';
 import "./MDRender.js";
 import "./sidebar.js";
 import "./model-selector.js";
+import "./toast.js";
 
 export class ChatPage extends LitElement {
     createRenderRoot() {
         return this;
-    } static properties = {
-        selectedChat: { state: true }, message: { state: true }, selectedModel: { state: true },
-        selectedProvider: { state: true }, providers: { state: true }, showModelSelector: { state: true },
-        sidebarCollapsed: { state: true }, models: { state: true }, modelsLoading: { state: true },
-        modelsError: { state: true }, chats: { state: true },
-        streamingMessage: { state: true }, isStreaming: { state: true }, currentChatId: { state: true },
-        currentMessages: { state: true }, currentChat: { state: true }, isNewChat: { state: true },
-        newModelMode: { state: true }, newModelUrl: { state: true }, newModelProgress: { state: true },
-        newModelError: { state: true }, connectionStatus: { state: true }
-    }; constructor() {
-        super();
-        this.app = new ChatApp();
-        Object.assign(this, {
-            selectedChat: "New Chat", message: "", selectedModel: this.app.getStoredModel(),
-            selectedProvider: this.app.getStoredProvider() || 'ollama', providers: this.app.getProviders(),
-            showModelSelector: false, sidebarCollapsed: false, models: [], modelsLoading: true,
-            modelsError: null, streamingMessage: "", isStreaming: false, currentChatId: null,
-            currentMessages: [], currentChat: null, isNewChat: false, newModelMode: false,
-            newModelUrl: "", newModelProgress: null, newModelError: null, chats: [],
-            connectionStatus: "checking"
-        });
-        this.loadChats();
     }
 
-    loadChats() { this.chats = this.app.getChats(); } connectedCallback() {
+    static properties = {
+        selectedChat: { state: true }, message: { state: true }, 
+        showModelSelector: { state: true }, sidebarCollapsed: { state: true }, 
+        models: { state: true }, modelsLoading: { state: true }, modelsError: { state: true }, 
+        chats: { state: true }, streamingMessage: { state: true }, isStreaming: { state: true }, 
+        currentChatId: { state: true }, currentMessages: { state: true }, currentChat: { state: true }, 
+        isNewChat: { state: true }, connectionStatus: { state: true }
+    };
+
+    constructor() {
+        super();
+        this.app = new ChatApp();
+        
+        // Local component state
+        this.selectedChat = "New Chat";
+        this.message = "";
+        this.showModelSelector = false;
+        this.sidebarCollapsed = false;
+        this.models = [];
+        this.modelsLoading = true;
+        this.modelsError = null;
+        this.streamingMessage = "";
+        this.isStreaming = false;
+        this.currentChatId = null;
+        this.currentMessages = [];
+        this.currentChat = null;
+        this.isNewChat = false;
+        this.chats = [];
+        this.connectionStatus = "checking";
+        
+        this.loadChats();
+        this.setupGlobalStateListeners();
+    }
+
+    setupGlobalStateListeners() {
+        // Listen for background streaming completion
+        globalState.on('backgroundStreamComplete', (data) => {
+            const toast = this.querySelector('toast-notification');
+            if (toast) {
+                toast.show(
+                    data.message, 
+                    'info', 
+                    0, // No auto-hide
+                    () => this.navigateToChat(data.chatId)
+                );
+            }
+        });
+
+        // Listen for global state changes
+        globalState.on('aiProviderChanged', () => this.requestUpdate());
+        globalState.on('modelChanged', () => this.requestUpdate());
+        globalState.on('chatChanged', (chatId) => {
+            if (chatId !== this.currentChatId) {
+                this.updateCurrentChat(chatId);
+            }
+        });
+    }
+
+    loadChats() { 
+        this.chats = this.app.getChats(); 
+    }
+
+    // Global state getters
+    get selectedModel() { return globalState.currentModel; }
+    get selectedProvider() { return globalState.currentAIProvider; }
+    get providers() { return globalState.getAllAIProviders(); }    connectedCallback() {
         super.connectedCallback();
         setTimeout(() => this.loadModels(this.selectedProvider), 100);
+        
         const updateFromUrl = () => {
             const chatId = window.location.pathname.substring(1);
-            if (chatId !== this.currentChatId) this.updateCurrentChat(chatId);
+            if (chatId !== this.currentChatId) {
+                this.updateCurrentChat(chatId);
+                globalState.setCurrentChat(chatId);
+            }
         };
+        
         window.addEventListener('popstate', updateFromUrl);
         window.addEventListener("chatTitleUpdated", (e) => {
             const { chatId, newTitle } = e.detail;
@@ -47,10 +98,7 @@ export class ChatPage extends LitElement {
                 this.currentChat = this.app.getChat(chatId);
             }
         });
-        window.addEventListener('providerConfigSaved', (e) => {
-            const { providerId } = e.detail;
-            this.loadModels(providerId);
-        });
+        
         updateFromUrl();
     }
     async loadModels(providerId = null) {
@@ -92,11 +140,9 @@ export class ChatPage extends LitElement {
         });
         this.chats = this.app.getChats();
         setTimeout(() => this.scrollToBottom(), 10);
-    }
-
-    scrollToBottom() {
-        const container = this.querySelector('.messages'); // Changed from shadowRoot to this
-        if (container) requestAnimationFrame(() => container.scrollTop = container.scrollHeight);
+    }    scrollToBottom() {
+        const container = this.querySelector('.messages');
+        Utils.scrollToBottom(container);
     }
 
     async createNewChat() {
@@ -108,9 +154,7 @@ export class ChatPage extends LitElement {
     navigateToChat(id) {
         window.history.pushState({}, '', `/${id}`);
         this.updateCurrentChat(id);
-    }
-
-    async sendMessage() {
+    }    async sendMessage() {
         if (!this.message.trim() || this.isStreaming) return;
 
         // Auto-create chat if none exists
@@ -118,16 +162,18 @@ export class ChatPage extends LitElement {
             const newChatId = this.app.createChat();
             this.chats = this.app.getChats();
             this.navigateToChat(newChatId);
-            // Wait for navigation to complete
             await new Promise(resolve => setTimeout(resolve, 10));
         }
 
         const userMessage = this.message;
         this.message = "";
         const userMsg = {
-            role: "user", content: userMessage, time: new Date().toLocaleTimeString(),
+            role: "user", 
+            content: userMessage, 
+            time: Utils.formatTime(),
             metadata: { model: this.selectedModel }
         };
+        
         this.currentMessages = this.app.addMessageWithTitleGeneration(this.currentChatId, userMsg, this.selectedModel);
         this.streamingMessage = "";
         this.isStreaming = true;
@@ -135,10 +181,15 @@ export class ChatPage extends LitElement {
         await this.app.streamResponse(
             this.selectedModel,
             this.currentMessages.filter(m => m.role === "user" || m.role === "ai"),
-            chunk => { this.streamingMessage = chunk; this.scrollToBottom(); },
+            chunk => { 
+                this.streamingMessage = chunk; 
+                this.scrollToBottom(); 
+            },
             final => {
                 const aiMsg = {
-                    role: "ai", content: final, time: new Date().toLocaleTimeString(),
+                    role: "ai", 
+                    content: final, 
+                    time: Utils.formatTime(),
                     metadata: { model: this.selectedModel }
                 };
                 this.currentMessages = this.app.addMessage(this.currentChatId, aiMsg);
@@ -150,7 +201,8 @@ export class ChatPage extends LitElement {
                 this.streamingMessage = aborted ? "" : error;
                 this.isStreaming = false;
                 this.scrollToBottom();
-            }
+            },
+            this.currentChatId // Pass chatId for background streaming support
         );
     }
 
@@ -169,47 +221,39 @@ export class ChatPage extends LitElement {
             e.preventDefault();
             this.sendMessage();
         }
+    }    handleInput(e) { this.message = e.target.value; }
+    
+    toggleSidebar() { 
+        Utils.toggle(this, 'sidebarCollapsed'); 
     }
-
-    handleInput(e) { this.message = e.target.value; }
-    toggleSidebar() { this.sidebarCollapsed = !this.sidebarCollapsed; }
-    toggleModelSelector() { this.showModelSelector = !this.showModelSelector; }
+    
+    toggleModelSelector() { 
+        Utils.toggle(this, 'showModelSelector'); 
+    }
+    
     selectModel(modelId) {
-        this.selectedModel = modelId;
+        globalState.setCurrentModel(modelId);
         this.showModelSelector = false;
-        this.app.saveModel(modelId);
-    }
-
-    async saveNewModel(modelUrl) {
-        this.newModelMode = true;
-        this.newModelUrl = modelUrl;
-        this.newModelProgress = null;
-        this.newModelError = null;
-        try {
-            await this.app.pullModel(modelUrl, progress => {
-                this.newModelProgress = progress;
-                if (progress.error) this.newModelError = progress.error;
-            }); Object.assign(this, { newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null });
-            this.loadModels('ollama'); // Only reload Ollama models after pulling
-        } catch (error) {
-            this.newModelError = error.message;
-        }
-    } async selectProvider(providerId) {
-        this.selectedProvider = providerId;
-        this.selectedModel = null;
+    }    async selectProvider(providerId) {
+        globalState.setCurrentAIProvider(providerId);
+        globalState.setCurrentModel(null);
         await this.app.switchProvider(providerId);
         this.loadModels(providerId);
-    } async saveProviderConfig(providerId, config) {
-        await this.app.saveProviderConfig(providerId, config);
-        this.loadModels(providerId);
     }
 
-    render() {
+    async saveProviderConfig(providerId, config) {
+        await this.app.saveProviderConfig(providerId, config);
+        this.loadModels(providerId);
+    }    render() {
         return html`
+            <toast-notification></toast-notification>
             <div class="app">
                 <sidebar-component
-                    .collapsed=${this.sidebarCollapsed} .chats=${this.chats} .currentChatId=${this.currentChatId}
-                    .onNewChat=${() => this.createNewChat()} .onNavigateToChat=${id => this.navigateToChat(id)}>
+                    .collapsed=${this.sidebarCollapsed} 
+                    .chats=${this.chats} 
+                    .currentChatId=${this.currentChatId}
+                    .onNewChat=${() => this.createNewChat()} 
+                    .onNavigateToChat=${id => this.navigateToChat(id)}>
                 </sidebar-component>
                 <main class="main-content ${this.sidebarCollapsed ? 'sidebar-collapsed' : ''}">
                     <div class="chat-header">
@@ -218,15 +262,18 @@ export class ChatPage extends LitElement {
                         </button>
                         <h1 class="chat-title">${this.selectedChat}</h1>
                         <model-selector
-                            .selectedModel=${this.selectedModel} .selectedProvider=${this.selectedProvider}
-                            .providers=${this.providers} .showModelSelector=${this.showModelSelector}
-                            .models=${this.models} .modelsLoading=${this.modelsLoading} .modelsError=${this.modelsError}
-                            .connectionStatus=${this.connectionStatus} .newModelMode=${this.newModelMode}
-                            .newModelUrl=${this.newModelUrl} .newModelProgress=${this.newModelProgress}
-                            .newModelError=${this.newModelError} .onToggleModelSelector=${() => this.toggleModelSelector()}
-                            .onSelectModel=${modelId => this.selectModel(modelId)} .onSelectProvider=${providerId => this.selectProvider(providerId)}
+                            .selectedModel=${this.selectedModel} 
+                            .selectedProvider=${this.selectedProvider}
+                            .providers=${this.providers} 
+                            .showModelSelector=${this.showModelSelector}
+                            .models=${this.models} 
+                            .modelsLoading=${this.modelsLoading} 
+                            .modelsError=${this.modelsError}
+                            .connectionStatus=${this.connectionStatus}
+                            .onToggleModelSelector=${() => this.toggleModelSelector()}
+                            .onSelectModel=${modelId => this.selectModel(modelId)} 
+                            .onSelectProvider=${providerId => this.selectProvider(providerId)}
                             .onSaveProviderConfig=${(providerId, config) => this.saveProviderConfig(providerId, config)}
-                            .onSaveNewModel=${modelUrl => this.saveNewModel(modelUrl)}
                             .onLoadModels=${(providerId) => this.loadModels(providerId)}>
                         </model-selector>
                     </div>
@@ -264,7 +311,7 @@ export class ChatPage extends LitElement {
                                     <div class="message-content">
                                         <div class="message-header">
                                             <span class="sender">${this.selectedModel}</span>
-                                            <span class="time">${new Date().toLocaleTimeString()}</span>
+                                            <span class="time">${Utils.formatTime()}</span>
                                         </div>
                                         ${this.streamingMessage ? html`
                                             <div class="content">

@@ -1,4 +1,5 @@
 import { LitElement, html } from 'lit';
+import { Utils } from './utils.js';
 
 export class SidebarComponent extends LitElement {
     static properties = {

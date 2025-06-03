@@ -5,10 +5,10 @@ export class ModelSelector extends LitElement {
         selectedModel: { type: String }, selectedProvider: { type: String }, showModelSelector: { type: Boolean },
         models: { type: Array }, modelsLoading: { type: Boolean }, modelsError: { type: String },
         providers: { type: Object }, showProviderConfig: { type: Boolean }, editingProvider: { type: String },
-        tempConfig: { type: Object }, connectionStatus: { type: String }, newModelMode: { type: Boolean },
-        newModelUrl: { type: String }, newModelProgress: { type: Object }, newModelError: { type: String },
-        expandedProviders: { type: Set }, loadingProviders: { type: Set }, onToggleModelSelector: { type: Function }, onSelectModel: { type: Function },
-        onSelectProvider: { type: Function }, onSaveProviderConfig: { type: Function }, onSaveNewModel: { type: Function },
+        tempConfig: { type: Object }, connectionStatus: { type: String },
+        expandedProviders: { type: Set }, loadingProviders: { type: Set }, 
+        onToggleModelSelector: { type: Function }, onSelectModel: { type: Function },
+        onSelectProvider: { type: Function }, onSaveProviderConfig: { type: Function },
         onLoadModels: { type: Function }
     };
 
@@ -18,7 +18,6 @@ export class ModelSelector extends LitElement {
             selectedModel: null, selectedProvider: 'ollama', showModelSelector: false, models: [],
             modelsLoading: true, modelsError: null, providers: {},
             showProviderConfig: false, editingProvider: null, tempConfig: {}, connectionStatus: "checking",
-            newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null,
             expandedProviders: new Set(), loadingProviders: new Set()
         });
     }
@@ -166,45 +165,14 @@ export class ModelSelector extends LitElement {
                                                 </div>
                                             ` : this.getModelsForProvider(id).length > 0 ? html`
                                                 <div class="models-grid">
-                                                    ${this.getModelsForProvider(id).map(model => html`
-                                                        <button class="model-card ${model.id === this.selectedModel ? 'selected' : ''}"
+                                                    ${this.getModelsForProvider(id).map(model => html`                                                        <button class="model-card ${model.id === this.selectedModel ? 'selected' : ''}"
                                                             @click=${() => this.selectModel(model.id, id)}>
                                                             <div class="model-status-icon">
                                                                 <div class="status-indicator status-${provider.requiresApiKey && !provider.apiKey ? 'error' : this.connectionStatus}"></div>
                                                             </div>
                                                             <span class="model-title-display" title="${model.name}">${model.name}</span>
-
                                                         </button>
                                                     `)}
-                                                    ${id === 'ollama' ? html`
-                                                        ${this.newModelMode ? html`
-                                                            <div class="model-card new-model-row">
-                                                                <input class="new-model-input" type="text" .value=${this.newModelUrl}
-                                                                    @input=${e => this.newModelUrl = e.target.value}
-                                                                    placeholder="model name or URL (e.g. llama3)" autofocus
-                                                                    @keydown=${e => {
-                                e.key === "Enter" && this.onSaveNewModel?.(this.newModelUrl);
-                                e.key === "Escape" && Object.assign(this, { newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null });
-                            }}
-                                                                    ?disabled=${!!this.newModelProgress} />
-                                                                <button class="server-action-btn save" @click=${() => this.onSaveNewModel?.(this.newModelUrl)}
-                                                                    ?disabled=${!this.newModelUrl.trim() || !!this.newModelProgress} title="Pull model">✓</button>
-                                                                <button class="server-action-btn cancel" @click=${() => Object.assign(this, {
-                                newModelMode: false, newModelUrl: "", newModelProgress: null, newModelError: null
-                            })} title="Cancel">✕</button>
-                                                                ${this.newModelProgress ? html`<span class="new-model-progress">
-                                                                    ${this.newModelProgress.status}${typeof this.newModelProgress.percent === "number" ? ` (${this.newModelProgress.percent}%)` : ''}
-                                                                </span>` : ''}
-                                                                ${this.newModelError ? html`<span class="new-model-error">${this.newModelError}</span>` : ''}
-                                                            </div>
-                                                        ` : html`
-                                                            <button class="model-card new-model-row" @click=${() => Object.assign(this, {
-                                newModelMode: true, newModelUrl: "", newModelProgress: null, newModelError: null
-                            })} title="Pull new model">
-                                                                <span class="model-title-display">+ New model</span>
-                                                            </button>
-                                                        `}
-                                                    ` : ''}
                                                 </div>
                                             ` : html`
                                                 <div class="no-connection">

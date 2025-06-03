@@ -1,79 +1,44 @@
-// Optimized core app class
-import { AIProvider } from './aiproviders.js';
+// Optimized core app class without workers
+import { AIProvider, ProviderFactory } from './aiproviders.js';
+import { globalState } from './global-state.js';
 
 export class ChatApp {
     constructor() {
-        this.worker = new Worker(new URL('./neo-worker.js', import.meta.url), { type: 'module' });
-        this.requestId = 0;
-        this.pendingRequests = new Map();
-        this.chats = this.load('chats', []);
-        this.messages = this.load('chatMessages', {});
+        this.aiProviders = new Map();
+        this.currentProvider = null;
+        this.chats = globalState.load('chats', []);
+        this.messages = globalState.load('chatMessages', {});
         this.initialized = false;
-        this.setupWorker();
-        this.initPromise = this.initWorker();
+        this.abortControllers = new Map();
+        this.initPromise = this.initProvider();
+    }    async getProvider(providerId, config) {
+        if (!this.aiProviders.has(providerId)) {
+            const ProviderClass = ProviderFactory[providerId];
+            if (!ProviderClass) throw new Error(`Unknown provider: ${providerId}`);
+
+            const provider = new ProviderClass(config);
+            await provider.initClient();
+            this.aiProviders.set(providerId, provider);
+        }
+        return this.aiProviders.get(providerId);
     }
 
-    setupWorker() {
-        this.worker.onmessage = ({ data: { type, id, data, error, success } }) => {
-            const req = this.pendingRequests.get(id);
-            if (!req) return;
+    async initProvider() {
+        const currentProvider = globalState.currentAIProvider;
+        const providerConfig = globalState.getCurrentAIProvider();
 
-            if (error) {
-                req.reject?.(new Error(error));
-                this.pendingRequests.delete(id);
-                return;
-            }
-
-            switch (type) {
-                case 'init':
-                case 'loadModels':
-                case 'generateTitle':
-                case 'abort':
-                    if (success || data !== undefined) req.resolve?.(data);
-                    this.pendingRequests.delete(id);
-                    break;
-                case 'streamChat':
-                    if (data.type === 'chunk') {
-                        req.onChunk?.(data.content);
-                    } else if (data.type === 'complete') {
-                        req.onComplete?.(data.content);
-                        this.pendingRequests.delete(id);
-                    } else {
-                        req.onError?.(data.error, data.aborted);
-                        this.pendingRequests.delete(id);
-                    }
-                    break;
-                case 'pullModel':
-                    req.onProgress?.(data);
-                    if (data.complete || data.error) {
-                        data.error ? req.reject?.(new Error(data.error)) : req.resolve?.();
-                        this.pendingRequests.delete(id);
-                    }
-                    break;
-            }
-        };
-    } async initWorker() {
-        const providers = this.getProviders();
-        const currentProvider = this.getStoredProvider();
-        const providerConfig = providers[currentProvider] || providers.ollama;
-
-        await this.sendWorkerMessage('init', {
-            url: providerConfig.url, // Fix: use 'url' instead of 'host'
-            provider: currentProvider,
-            apiKey: providerConfig.apiKey
-        });
+        this.currentProvider = await this.getProvider(currentProvider, providerConfig);
         this.initialized = true;
     }
 
     async switchProvider(providerId) {
-        const providers = this.getProviders();
-        const providerConfig = providers[providerId];
+        const providerConfig = globalState.getAllAIProviders()[providerId];
 
         if (providerConfig) {
-            this.saveProvider(providerId);
+            globalState.setCurrentAIProvider(providerId);
             this.initialized = false;
-            this.initPromise = this.initWorker();
-            await this.initPromise;
+            this.currentProvider = await this.getProvider(providerId, providerConfig);
+            this.initialized = true;
         }
     }
 
@@ -81,31 +46,21 @@ export class ChatApp {
         if (!this.initialized) {
             await this.initPromise;
         }
-    }
-
-    sendWorkerMessage(type, data = {}) {
-        return new Promise((resolve, reject) => {
-            const id = ++this.requestId;
-            this.pendingRequests.set(id, { resolve, reject });
-            this.worker.postMessage({ type, id, data });
-        });
-    }
-
-    save(key, data) {
-        localStorage?.setItem(`neo2_${key}`, JSON.stringify(data));
+    }    save(key, data) {
+        globalState.save(key, data);
     }
 
     load(key, fallback = null) {
-        try {
-            return JSON.parse(localStorage?.getItem(`neo2_${key}`)) || fallback;
-        } catch {
-            return fallback;
-        }
+        return globalState.load(key, fallback);
     }
 
     saveState() {
         this.save('chats', this.chats);
         this.save('chatMessages', this.messages);
+    }    async loadModels(providerId, providerConfig = null) {
+        await this.ensureInitialized();
+        const config = providerConfig || globalState.getAllAIProviders()[providerId];
+        const provider = await this.getProvider(providerId, config);        return await provider.loadModels();
     }
 
     updateChatTitle(chatId, title) {
@@ -117,21 +72,6 @@ export class ChatApp {
                 detail: { chatId, newTitle: title }
             }));
         }
-    } async loadModels(providerId, providerConfig = null) {
-        await this.ensureInitialized();
-        const config = providerConfig || this.getProviders()[providerId];
-        const models = await this.sendWorkerMessage('loadModels', {
-            provider: providerId,
-            config
-        });
-        return models;
-    } async pullModel(modelUrl, onProgress) {
-        await this.ensureInitialized();
-        return new Promise((resolve, reject) => {
-            const id = ++this.requestId;
-            this.pendingRequests.set(id, { resolve, reject, onProgress });
-            this.worker.postMessage({ type: 'pullModel', id, data: { modelUrl } });
-        });
     }
 
     createChat() {
@@ -156,36 +96,65 @@ export class ChatApp {
         this.saveState();
         if (isFirst && model && message.content) this.generateTitleAsync(chatId, message.content, model);
         return [...this.messages[chatId]];
-    }
-
-    async generateTitleAsync(chatId, userMessage, model) {
+    }    async generateTitleAsync(chatId, userMessage, model) {
         try {
-            const { title } = await this.sendWorkerMessage('generateTitle', { userMessage, model });
+            const title = await this.currentProvider.generateTitle(userMessage, model);
             this.updateChatTitle(chatId, title);
         } catch (e) {
             console.warn('Title generation failed:', e);
         }
-    } async streamResponse(model, messages, onChunk, onComplete, onError) {
+    }
+
+    async streamResponse(model, messages, onChunk, onComplete, onError, chatId = null) {
         await this.ensureInitialized();
-        return new Promise(resolve => {
-            const id = ++this.requestId;
-            this.pendingRequests.set(id, {
-                onChunk,
-                onComplete: content => {
-                    onComplete(content);
-                    resolve();
-                },
-                onError: (error, aborted) => {
-                    onError?.(error, aborted);
-                    resolve();
+        
+        const abortController = new AbortController();
+        if (chatId) {
+            this.abortControllers.set(chatId, abortController);
+            globalState.addStreamingChat(chatId, { model, messages });
+        }
+
+        try {
+            let content = '';
+            const provider = this.currentProvider;
+            provider.abortController = abortController;
+
+            for await (const chunk of provider.chat(model, messages)) {
+                if (abortController.signal.aborted) break;
+                content += chunk;
+                onChunk?.(content);
+            }
+
+            if (!abortController.signal.aborted) {
+                onComplete?.(content);
+                if (chatId) {
+                    globalState.removeStreamingChat(chatId);
+                    // Show toast notification for background streaming
+                    if (globalState.currentChat !== chatId) {
+                        globalState.emit('backgroundStreamComplete', { 
+                            chatId, 
+                            message: `AI response completed in background chat` 
+                        });
+                    }
                 }
-            });
-            this.worker.postMessage({ type: 'streamChat', id, data: { model, messagesArray: messages } });
-        });
+            }
+        } catch (error) {
+            const isAborted = error.name === 'AbortError';
+            onError?.(isAborted ? 'Stream cancelled' : error.message, isAborted);
+            if (chatId) globalState.removeStreamingChat(chatId);
+        } finally {
+            if (chatId) this.abortControllers.delete(chatId);
+        }
     }
 
     async abort(chatId) {
-        await this.sendWorkerMessage('abort');
+        const abortController = this.abortControllers.get(chatId);
+        if (abortController) {
+            abortController.abort();
+            this.abortControllers.delete(chatId);
+            globalState.removeStreamingChat(chatId);
+        }
+
         if (chatId && this.messages[chatId]?.length > 0) {
             const msgs = this.messages[chatId];
             if (msgs[msgs.length - 1]?.role === 'assistant') msgs.pop();
@@ -194,10 +163,37 @@ export class ChatApp {
             return [...this.messages[chatId]];
         }
         return null;
+    }    saveModel(model) {
+        globalState.setCurrentModel(model);
     }
 
-    saveModel(model) {
-        this.save('selectedModel', model);
+    getStoredModel() {
+        return globalState.currentModel;
+    }
+
+    getStoredProvider() {
+        return globalState.currentAIProvider;
+    }
+
+    saveProvider(providerId) {
+        globalState.setCurrentAIProvider(providerId);
+    }
+
+    getProviders() {
+        return globalState.getAllAIProviders();
+    }
+
+    async saveProviderConfig(providerId, config) {
+        globalState.updateAIProvider(providerId, config);
+        
+        // Clear the provider from cache to force reinitialization
+        this.aiProviders.delete(providerId);
+
+        if (providerId === globalState.currentAIProvider) {
+            this.initialized = false;
+            this.initPromise = this.initProvider();
+            await this.initPromise;
+        }
     }
 
     getChats() {
@@ -210,43 +206,5 @@ export class ChatApp {
 
     getChat(chatId) {
         return this.chats.find(c => c.id === chatId) || null;
-    }
-
-    getStoredModel() {
-        return this.load('selectedModel');
-    }
-
-    getStoredProvider() {
-        return this.load('selectedProvider', 'ollama');
-    }
-
-    saveProvider(providerId) {
-        this.save('selectedProvider', providerId);
-    }
-
-    getProviders() {
-        return AIProvider.getProviders(this.load('providers', {}));
-    }
-
-    async saveProviderConfig(providerId, config) {
-        const currentProviders = this.load('providers', {});
-        const updatedProviders = AIProvider.mergeProviderConfig(currentProviders, providerId, config);
-        this.save('providers', updatedProviders);
-
-        // Clear the provider from cache to force reinitialization
-        if (this.worker) {
-            await this.sendWorkerMessage('clearProvider', { providerId });
-        }
-
-        if (providerId === this.getStoredProvider()) {
-            this.initialized = false;
-            this.initPromise = this.initWorker();
-            await this.initPromise;
-        }
-
-        // Notify UI to clear models for this provider
-        window.dispatchEvent(new CustomEvent('providerConfigSaved', {
-            detail: { providerId }
-        }));
     }
 }
