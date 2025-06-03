@@ -74,7 +74,6 @@ export class AIProvider {
             });
 
             const content = response.choices[0]?.message?.content || '';
-            console.log('Title generation response:', content);
             const cleaned = content.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, '')
                 .replace(/<\/?answer>/gi, '').replace(/[*_`#\[\]()]/g, '').trim()
                 .split(/\s+/).filter(w => w.length).slice(0, 7).join(' ');

@@ -103,9 +103,7 @@ export class ChatApp {
         } catch (e) {
             console.warn('Title generation failed:', e);
         }
-    }
-
-    async streamResponse(model, messages, onChunk, onComplete, onError, chatId = null) {
+    } async streamResponse(model, messages, onChunk, onComplete, onError, chatId = null) {
         await this.ensureInitialized();
 
         const abortController = new AbortController();
@@ -131,9 +129,11 @@ export class ChatApp {
                     globalState.removeStreamingChat(chatId);
                     // Show toast notification for background streaming
                     if (globalState.currentChat !== chatId) {
+                        const chat = this.getChat(chatId);
+                        const chatTitle = chat?.title || 'Chat';
                         globalState.emit('backgroundStreamComplete', {
                             chatId,
-                            message: `AI response completed in background chat`
+                            message: `AI response completed in "${chatTitle}"`
                         });
                     }
                 }

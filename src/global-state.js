@@ -66,9 +66,7 @@ export class GlobalState {
     setCurrentChat(chatId) {
         this.currentChat = chatId;
         this.emit('chatChanged', chatId);
-    }
-
-    // Streaming management
+    }    // Streaming management
     addStreamingChat(chatId, streamInfo) {
         this.streamingChats.set(chatId, streamInfo);
         this.emit('streamingStarted', { chatId, streamInfo });
@@ -81,6 +79,14 @@ export class GlobalState {
 
     getStreamingChat(chatId) {
         return this.streamingChats.get(chatId);
+    }
+
+    isStreamingForChat(chatId) {
+        return this.streamingChats.has(chatId);
+    }
+
+    hasAnyStreaming() {
+        return this.streamingChats.size > 0;
     }
 
     // Getters

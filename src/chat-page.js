@@ -44,9 +44,7 @@ export class ChatPage extends LitElement {
 
         this.loadChats();
         this.setupGlobalStateListeners();
-    }
-
-    setupGlobalStateListeners() {
+    } setupGlobalStateListeners() {
         // Listen for background streaming completion
         globalState.on('backgroundStreamComplete', (data) => {
             const toast = this.querySelector('toast-notification');
@@ -58,6 +56,22 @@ export class ChatPage extends LitElement {
                     () => this.navigateToChat(data.chatId)
                 );
             }
+        });
+
+        // Listen for streaming state changes
+        globalState.on('streamingStarted', (data) => {
+            if (data.chatId === this.currentChatId) {
+                this.isStreaming = true;
+            }
+            this.requestUpdate();
+        });
+
+        globalState.on('streamingEnded', (data) => {
+            if (data.chatId === this.currentChatId) {
+                this.isStreaming = false;
+                this.streamingMessage = "";
+            }
+            this.requestUpdate();
         });
 
         // Listen for global state changes
@@ -79,9 +93,7 @@ export class ChatPage extends LitElement {
     get selectedProvider() { return globalState.currentAIProvider; }
     get providers() { return globalState.getAllAIProviders(); } connectedCallback() {
         super.connectedCallback();
-        setTimeout(() => this.loadModels(this.selectedProvider), 100);
-
-        const updateFromUrl = () => {
+        setTimeout(() => this.loadModels(this.selectedProvider), 100); const updateFromUrl = () => {
             const chatId = window.location.pathname.substring(1);
             if (chatId !== this.currentChatId) {
                 this.updateCurrentChat(chatId);
@@ -129,15 +141,20 @@ export class ChatPage extends LitElement {
             const modelSelector = this.querySelector('model-selector');
             modelSelector?.onModelsLoaded?.(targetProvider);
         }
-    }
-
-    updateCurrentChat(chatId) {
+    } updateCurrentChat(chatId) {
         const currentChat = this.app.getChat(chatId);
         const currentMessages = this.app.getMessages(chatId);
         Object.assign(this, {
             currentChatId: chatId, currentChat, currentMessages,
             isNewChat: !currentChat, selectedChat: currentChat?.title || "New Chat"
         });
+
+        // Update streaming state for the new chat
+        this.isStreaming = globalState.isStreamingForChat(chatId);
+        if (!this.isStreaming) {
+            this.streamingMessage = "";
+        }
+
         this.chats = this.app.getChats();
         setTimeout(() => this.scrollToBottom(), 10);
     } scrollToBottom() {
@@ -149,13 +166,13 @@ export class ChatPage extends LitElement {
         const id = this.app.createChat();
         this.chats = this.app.getChats();
         this.navigateToChat(id);
-    }
-
-    navigateToChat(id) {
+    } navigateToChat(id) {
         window.history.pushState({}, '', `/${id}`);
         this.updateCurrentChat(id);
+        globalState.setCurrentChat(id);
     } async sendMessage() {
-        if (!this.message.trim() || this.isStreaming) return;
+        // Check if current chat is streaming or if any message input is empty
+        if (!this.message.trim() || globalState.isStreamingForChat(this.currentChatId)) return;
 
         // Auto-create chat if none exists
         if (!this.currentChatId || this.isNewChat) {
@@ -165,6 +182,8 @@ export class ChatPage extends LitElement {
             await new Promise(resolve => setTimeout(resolve, 10));
         }
 
+        // Capture the chatId at message send time to avoid issues with chat switching
+        const messageChatId = this.currentChatId;
         const userMessage = this.message;
         this.message = "";
         const userMsg = {
@@ -174,7 +193,7 @@ export class ChatPage extends LitElement {
             metadata: { model: this.selectedModel }
         };
 
-        this.currentMessages = this.app.addMessageWithTitleGeneration(this.currentChatId, userMsg, this.selectedModel);
+        this.currentMessages = this.app.addMessageWithTitleGeneration(messageChatId, userMsg, this.selectedModel);
         this.streamingMessage = "";
         this.isStreaming = true;
 
@@ -182,8 +201,11 @@ export class ChatPage extends LitElement {
             this.selectedModel,
             this.currentMessages.filter(m => m.role === "user" || m.role === "ai"),
             chunk => {
-                this.streamingMessage = chunk;
-                this.scrollToBottom();
+                // Only update UI if we're still viewing the same chat
+                if (this.currentChatId === messageChatId) {
+                    this.streamingMessage = chunk;
+                    this.scrollToBottom();
+                }
             },
             final => {
                 const aiMsg = {
@@ -192,22 +214,28 @@ export class ChatPage extends LitElement {
                     time: Utils.formatTime(),
                     metadata: { model: this.selectedModel }
                 };
-                this.currentMessages = this.app.addMessage(this.currentChatId, aiMsg);
-                this.streamingMessage = "";
-                this.isStreaming = false;
-                this.scrollToBottom();
+                this.app.addMessage(messageChatId, aiMsg);
+
+                // Only update UI if we're still viewing the same chat
+                if (this.currentChatId === messageChatId) {
+                    this.currentMessages = this.app.getMessages(messageChatId);
+                    this.streamingMessage = "";
+                    this.isStreaming = false;
+                    this.scrollToBottom();
+                }
             },
             (error, aborted) => {
-                this.streamingMessage = aborted ? "" : error;
-                this.isStreaming = false;
-                this.scrollToBottom();
+                // Only update UI if we're still viewing the same chat
+                if (this.currentChatId === messageChatId) {
+                    this.streamingMessage = aborted ? "" : error;
+                    this.isStreaming = false;
+                    this.scrollToBottom();
+                }
             },
-            this.currentChatId // Pass chatId for background streaming support
+            messageChatId // Use captured chatId for background streaming
         );
-    }
-
-    async abortStream() {
-        if (this.isStreaming) {
+    } async abortStream() {
+        if (this.isStreaming && this.currentChatId) {
             const updatedMessages = await this.app.abort(this.currentChatId);
             if (updatedMessages) this.currentMessages = updatedMessages;
             this.streamingMessage = "";
