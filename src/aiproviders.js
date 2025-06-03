@@ -114,17 +114,6 @@ export class OllamaProvider extends AIProvider {
 }
 
 export class OpenAIProvider extends AIProvider {
-    async initClient() {
-        this.client = new OpenAI({
-            apiKey: this.config.apiKey || 'dummy',
-            baseURL: this.config.url || this.config.host, // Fix: use url from config, fallback to host
-            dangerouslyAllowBrowser: true,
-            defaultHeaders: {
-                "HTTP-Referer": "https://neo3.vercel.app/", // Optional: Your site URL for rankings
-                "X-Title": "neo3", // This sets your app name
-            },
-        });
-    }
     formatModels(models) {
         return models.filter(m => m.id.includes('gpt')).map(model => ({
             id: model.id,
@@ -150,6 +139,17 @@ export class OpenAIProvider extends AIProvider {
 }
 
 export class OpenRouterProvider extends AIProvider {
+    async initClient() {
+        this.client = new OpenAI({
+            apiKey: this.config.apiKey || 'dummy',
+            baseURL: this.config.url || this.config.host, // Fix: use url from config, fallback to host
+            dangerouslyAllowBrowser: true,
+            defaultHeaders: {
+                "HTTP-Referer": "https://neo3.vercel.app/", // Optional: Your site URL for rankings
+                "X-Title": "neo3", // This sets your app name
+            },
+        });
+    }
     async loadModels() {
         try {
             const response = await fetch('https://openrouter.ai/api/v1/models', {
