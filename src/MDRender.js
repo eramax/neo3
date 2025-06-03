@@ -86,6 +86,14 @@ export class IncrementalMarkdown extends HTMLElement {
     // Event handling
     _setupEventListeners() {
         this._container.addEventListener('click', (event) => {
+            const thinkHeader = event.target.closest('.think-header');
+            if (thinkHeader) {
+                const thinkContent = thinkHeader.nextElementSibling;
+                if (thinkContent) {
+                    thinkContent.classList.toggle('hidden');
+                }
+            }
+
             const copyButton = event.target.closest('.copy-code-btn');
             if (copyButton) {
                 const codeContainer = copyButton.closest('.code-block-container');
