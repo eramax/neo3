@@ -31,6 +31,8 @@ import "prismjs/components/prism-haskell"
 import "prismjs/components/prism-r"
 import "prismjs/components/prism-perl"
 import "prismjs/components/prism-lua"
+import "prismjs/components/prism-fsharp"
+import "prismjs/components/prism-scala"
 import { visit } from "unist-util-visit"
 
 const LANG_MAP = {

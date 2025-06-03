@@ -34,4 +34,5 @@
 - User wants to fix Prism tokenizePlaceholders error by removing problematic language imports that cause dependency conflicts
 - User wants to restore all removed Prism languages by adding markup-templating dependency to fix tokenizePlaceholders errors
 - User wants to add syntax highlighting support for Dart, Julia, Elixir, Haskell, R, Perl, and Lua programming languages
+- User wants to add F# and Scala syntax highlighting support to the code highlighter
 - User wants to extract Prism syntax highlighting into separate module and optimize both files for better code organization
