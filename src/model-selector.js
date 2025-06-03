@@ -6,7 +6,7 @@ export class ModelSelector extends LitElement {
         models: { type: Array }, modelsLoading: { type: Boolean }, modelsError: { type: String },
         providers: { type: Object }, showProviderConfig: { type: Boolean }, editingProvider: { type: String },
         tempConfig: { type: Object }, connectionStatus: { type: String },
-        expandedProviders: { type: Set }, loadingProviders: { type: Set }, 
+        expandedProviders: { type: Set }, loadingProviders: { type: Set },
         onToggleModelSelector: { type: Function }, onSelectModel: { type: Function },
         onSelectProvider: { type: Function }, onSaveProviderConfig: { type: Function },
         onLoadModels: { type: Function }

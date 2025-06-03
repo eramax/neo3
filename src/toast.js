@@ -26,7 +26,7 @@ export class ToastNotification extends LitElement {
         this.duration = duration;
         this.onClick = onClick;
         this.visible = true;
-        
+
         if (duration > 0) {
             setTimeout(() => this.hide(), duration);
         }
@@ -45,7 +45,7 @@ export class ToastNotification extends LitElement {
 
     render() {
         if (!this.visible) return '';
-        
+
         return html`
             <div class="toast toast-${this.type} ${this.onClick ? 'clickable' : ''}" 
                  @click=${this.onClick ? this.handleClick : null}>

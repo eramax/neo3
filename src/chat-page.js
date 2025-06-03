@@ -13,18 +13,18 @@ export class ChatPage extends LitElement {
     }
 
     static properties = {
-        selectedChat: { state: true }, message: { state: true }, 
-        showModelSelector: { state: true }, sidebarCollapsed: { state: true }, 
-        models: { state: true }, modelsLoading: { state: true }, modelsError: { state: true }, 
-        chats: { state: true }, streamingMessage: { state: true }, isStreaming: { state: true }, 
-        currentChatId: { state: true }, currentMessages: { state: true }, currentChat: { state: true }, 
+        selectedChat: { state: true }, message: { state: true },
+        showModelSelector: { state: true }, sidebarCollapsed: { state: true },
+        models: { state: true }, modelsLoading: { state: true }, modelsError: { state: true },
+        chats: { state: true }, streamingMessage: { state: true }, isStreaming: { state: true },
+        currentChatId: { state: true }, currentMessages: { state: true }, currentChat: { state: true },
         isNewChat: { state: true }, connectionStatus: { state: true }
     };
 
     constructor() {
         super();
         this.app = new ChatApp();
-        
+
         // Local component state
         this.selectedChat = "New Chat";
         this.message = "";
@@ -41,7 +41,7 @@ export class ChatPage extends LitElement {
         this.isNewChat = false;
         this.chats = [];
         this.connectionStatus = "checking";
-        
+
         this.loadChats();
         this.setupGlobalStateListeners();
     }
@@ -52,8 +52,8 @@ export class ChatPage extends LitElement {
             const toast = this.querySelector('toast-notification');
             if (toast) {
                 toast.show(
-                    data.message, 
-                    'info', 
+                    data.message,
+                    'info',
                     0, // No auto-hide
                     () => this.navigateToChat(data.chatId)
                 );
@@ -70,17 +70,17 @@ export class ChatPage extends LitElement {
         });
     }
 
-    loadChats() { 
-        this.chats = this.app.getChats(); 
+    loadChats() {
+        this.chats = this.app.getChats();
     }
 
     // Global state getters
     get selectedModel() { return globalState.currentModel; }
     get selectedProvider() { return globalState.currentAIProvider; }
-    get providers() { return globalState.getAllAIProviders(); }    connectedCallback() {
+    get providers() { return globalState.getAllAIProviders(); } connectedCallback() {
         super.connectedCallback();
         setTimeout(() => this.loadModels(this.selectedProvider), 100);
-        
+
         const updateFromUrl = () => {
             const chatId = window.location.pathname.substring(1);
             if (chatId !== this.currentChatId) {
@@ -88,7 +88,7 @@ export class ChatPage extends LitElement {
                 globalState.setCurrentChat(chatId);
             }
         };
-        
+
         window.addEventListener('popstate', updateFromUrl);
         window.addEventListener("chatTitleUpdated", (e) => {
             const { chatId, newTitle } = e.detail;
@@ -98,7 +98,7 @@ export class ChatPage extends LitElement {
                 this.currentChat = this.app.getChat(chatId);
             }
         });
-        
+
         updateFromUrl();
     }
     async loadModels(providerId = null) {
@@ -140,7 +140,7 @@ export class ChatPage extends LitElement {
         });
         this.chats = this.app.getChats();
         setTimeout(() => this.scrollToBottom(), 10);
-    }    scrollToBottom() {
+    } scrollToBottom() {
         const container = this.querySelector('.messages');
         Utils.scrollToBottom(container);
     }
@@ -154,7 +154,7 @@ export class ChatPage extends LitElement {
     navigateToChat(id) {
         window.history.pushState({}, '', `/${id}`);
         this.updateCurrentChat(id);
-    }    async sendMessage() {
+    } async sendMessage() {
         if (!this.message.trim() || this.isStreaming) return;
 
         // Auto-create chat if none exists
@@ -168,12 +168,12 @@ export class ChatPage extends LitElement {
         const userMessage = this.message;
         this.message = "";
         const userMsg = {
-            role: "user", 
-            content: userMessage, 
+            role: "user",
+            content: userMessage,
             time: Utils.formatTime(),
             metadata: { model: this.selectedModel }
         };
-        
+
         this.currentMessages = this.app.addMessageWithTitleGeneration(this.currentChatId, userMsg, this.selectedModel);
         this.streamingMessage = "";
         this.isStreaming = true;
@@ -181,14 +181,14 @@ export class ChatPage extends LitElement {
         await this.app.streamResponse(
             this.selectedModel,
             this.currentMessages.filter(m => m.role === "user" || m.role === "ai"),
-            chunk => { 
-                this.streamingMessage = chunk; 
-                this.scrollToBottom(); 
+            chunk => {
+                this.streamingMessage = chunk;
+                this.scrollToBottom();
             },
             final => {
                 const aiMsg = {
-                    role: "ai", 
-                    content: final, 
+                    role: "ai",
+                    content: final,
                     time: Utils.formatTime(),
                     metadata: { model: this.selectedModel }
                 };
@@ -221,20 +221,20 @@ export class ChatPage extends LitElement {
             e.preventDefault();
             this.sendMessage();
         }
-    }    handleInput(e) { this.message = e.target.value; }
-    
-    toggleSidebar() { 
-        Utils.toggle(this, 'sidebarCollapsed'); 
+    } handleInput(e) { this.message = e.target.value; }
+
+    toggleSidebar() {
+        Utils.toggle(this, 'sidebarCollapsed');
     }
-    
-    toggleModelSelector() { 
-        Utils.toggle(this, 'showModelSelector'); 
+
+    toggleModelSelector() {
+        Utils.toggle(this, 'showModelSelector');
     }
-    
+
     selectModel(modelId) {
         globalState.setCurrentModel(modelId);
         this.showModelSelector = false;
-    }    async selectProvider(providerId) {
+    } async selectProvider(providerId) {
         globalState.setCurrentAIProvider(providerId);
         globalState.setCurrentModel(null);
         await this.app.switchProvider(providerId);
@@ -244,7 +244,7 @@ export class ChatPage extends LitElement {
     async saveProviderConfig(providerId, config) {
         await this.app.saveProviderConfig(providerId, config);
         this.loadModels(providerId);
-    }    render() {
+    } render() {
         return html`
             <toast-notification></toast-notification>
             <div class="app">

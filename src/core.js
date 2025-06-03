@@ -11,7 +11,7 @@ export class ChatApp {
         this.initialized = false;
         this.abortControllers = new Map();
         this.initPromise = this.initProvider();
-    }    async getProvider(providerId, config) {
+    } async getProvider(providerId, config) {
         if (!this.aiProviders.has(providerId)) {
             const ProviderClass = ProviderFactory[providerId];
             if (!ProviderClass) throw new Error(`Unknown provider: ${providerId}`);
@@ -46,7 +46,7 @@ export class ChatApp {
         if (!this.initialized) {
             await this.initPromise;
         }
-    }    save(key, data) {
+    } save(key, data) {
         globalState.save(key, data);
     }
 
@@ -57,10 +57,10 @@ export class ChatApp {
     saveState() {
         this.save('chats', this.chats);
         this.save('chatMessages', this.messages);
-    }    async loadModels(providerId, providerConfig = null) {
+    } async loadModels(providerId, providerConfig = null) {
         await this.ensureInitialized();
         const config = providerConfig || globalState.getAllAIProviders()[providerId];
-        const provider = await this.getProvider(providerId, config);        return await provider.loadModels();
+        const provider = await this.getProvider(providerId, config); return await provider.loadModels();
     }
 
     updateChatTitle(chatId, title) {
@@ -96,7 +96,7 @@ export class ChatApp {
         this.saveState();
         if (isFirst && model && message.content) this.generateTitleAsync(chatId, message.content, model);
         return [...this.messages[chatId]];
-    }    async generateTitleAsync(chatId, userMessage, model) {
+    } async generateTitleAsync(chatId, userMessage, model) {
         try {
             const title = await this.currentProvider.generateTitle(userMessage, model);
             this.updateChatTitle(chatId, title);
@@ -107,7 +107,7 @@ export class ChatApp {
 
     async streamResponse(model, messages, onChunk, onComplete, onError, chatId = null) {
         await this.ensureInitialized();
-        
+
         const abortController = new AbortController();
         if (chatId) {
             this.abortControllers.set(chatId, abortController);
@@ -131,9 +131,9 @@ export class ChatApp {
                     globalState.removeStreamingChat(chatId);
                     // Show toast notification for background streaming
                     if (globalState.currentChat !== chatId) {
-                        globalState.emit('backgroundStreamComplete', { 
-                            chatId, 
-                            message: `AI response completed in background chat` 
+                        globalState.emit('backgroundStreamComplete', {
+                            chatId,
+                            message: `AI response completed in background chat`
                         });
                     }
                 }
@@ -163,7 +163,7 @@ export class ChatApp {
             return [...this.messages[chatId]];
         }
         return null;
-    }    saveModel(model) {
+    } saveModel(model) {
         globalState.setCurrentModel(model);
     }
 
@@ -185,7 +185,7 @@ export class ChatApp {
 
     async saveProviderConfig(providerId, config) {
         globalState.updateAIProvider(providerId, config);
-        
+
         // Clear the provider from cache to force reinitialization
         this.aiProviders.delete(providerId);
 
