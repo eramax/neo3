@@ -1,7 +1,9 @@
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import hljs from "highlight.js";
+import katex from "katex";
 
 // Constants
 const HTML_ESCAPE_MAP = {
@@ -17,7 +19,7 @@ const COPY_ICON_SVG = `<svg width="16" height="16" fill="currentColor" viewBox="
 const UPDATABLE_NODE_TYPES = new Set([
     'text', 'inlineCode', 'html', 'code', 'paragraph',
     'heading', 'strong', 'emphasis', 'blockquote',
-    'list', 'listItem', 'link'
+    'list', 'listItem', 'link', 'inlineMath', 'math'
 ]);
 
 export class IncrementalMarkdown extends HTMLElement {
@@ -27,7 +29,7 @@ export class IncrementalMarkdown extends HTMLElement {
         this._container = document.createElement('div');
         this._lastProcessedAst = null;
         this.processedLength = 0;
-        this.processor = unified().use(remarkParse).use(remarkGfm);
+        this.processor = unified().use(remarkParse).use(remarkGfm).use(remarkMath);
         this._setupEventListeners();
     }
 
@@ -204,6 +206,8 @@ export class IncrementalMarkdown extends HTMLElement {
             link: () => this._updateLinkNode(element, newNode, oldNode),
             list: () => this._updateListNode(element, newNode, oldNode),
             html: () => this._updateHtmlNode(element, newNode),
+            inlineMath: () => this._updateMathNode(element, newNode),
+            math: () => this._updateMathNode(element, newNode),
             default: () => this._updateChildrenInPlace(element, newNode.children, oldNode.children)
         };
 
@@ -264,6 +268,19 @@ export class IncrementalMarkdown extends HTMLElement {
                 codeElement.className = `hljs language-${this.escapeHtml(language)}`;
             }
         }
+    }
+
+    _updateMathNode(element, newNode) {
+        try {
+            const html = katex.renderToString(newNode.value, {
+                displayMode: newNode.type === 'math',
+                throwOnError: false
+            });
+            element.innerHTML = html;
+        } catch (err) {
+            element.textContent = newNode.value;
+        }
+        return true;
     }
 
     _updateChildrenInPlace(element, newChildren, oldChildren) {
@@ -339,6 +356,8 @@ export class IncrementalMarkdown extends HTMLElement {
             code: () => node1.value === node2.value && node1.lang === node2.lang,
             link: () => node1.url === node2.url && this._childrenEqual(node1.children, node2.children),
             list: () => node1.ordered === node2.ordered && this._childrenEqual(node1.children, node2.children),
+            inlineMath: () => node1.value === node2.value,
+            math: () => node1.value === node2.value,
             default: () => this._childrenEqual(node1.children, node2.children)
         };
 
@@ -374,6 +393,8 @@ export class IncrementalMarkdown extends HTMLElement {
             break: () => "<br>",
             thematicBreak: () => "<hr>",
             html: () => node.value,
+            inlineMath: () => this.renderMath(node.value, false),
+            math: () => this.renderMath(node.value, true),
             table: () => `<table>${this.createHTMLFromChildren(node.children)}</table>`,
             tableRow: () => `<tr>${this.createHTMLFromChildren(node.children)}</tr>`,
             tableCell: () => {
@@ -436,6 +457,17 @@ export class IncrementalMarkdown extends HTMLElement {
         }
 
         return hljs.highlightAuto(trimmedCode).value;
+    }
+
+    renderMath(expression, displayMode = false) {
+        try {
+            return katex.renderToString(expression, {
+                displayMode,
+                throwOnError: false
+            });
+        } catch (err) {
+            return `<span class="math-error">${this.escapeHtml(expression)}</span>`;
+        }
     }
 }
 

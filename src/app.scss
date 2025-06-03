@@ -1636,3 +1636,23 @@ body {
     }
   }
 }
+
+// KaTeX Math Styles
+@import url("https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css");
+
+.katex-display {
+  margin: 1em 0;
+  text-align: center;
+}
+
+.katex {
+  font-size: 1.1em;
+}
+
+.math-error {
+  color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.1);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
