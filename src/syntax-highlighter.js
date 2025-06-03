@@ -48,13 +48,13 @@ const LANG_MAP = {
 export const remarkSyntaxHighlight = () => (tree) => {
     visit(tree, 'code', (node) => {
         const lang = node.lang?.toLowerCase()
-        
+
         // Skip highlighting for Mermaid diagrams
         if (lang === 'mermaid') {
             node.highlighted = null;
             return;
         }
-        
+
         const actualLang = LANG_MAP[lang] || lang
 
         if (actualLang && Prism.languages[actualLang]) {

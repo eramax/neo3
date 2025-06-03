@@ -100,6 +100,9 @@ export class DOMUtils {
             const html = this.createHTMLFromNode(newChild);
             const newElement = this._createElementFromHTML(html);
             if (newElement) {
+                if (isMermaidCode(newChild)) {
+                    setTimeout(() => renderMermaidDiagram(newChild.value, newElement), 0);
+                }
                 if (existingChild) {
                     element.replaceChild(newElement, existingChild);
                 } else {
