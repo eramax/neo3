@@ -43,3 +43,11 @@
 - User wants to fix Mermaid diagram light colors by implementing proper dark mode theming with CSS overrides and theme variables
 - User wants to enhance Mermaid diagrams with better dark mode colors and animated effects on arrows and flows
 - User wants to remove !important declarations and fix element positioning with dimmed colors and flowing pulse animations on arrows
+- User wants to fix Mermaid diagram colors that became too bright by adjusting themeVariables to maintain dark theme
+- User wants to fix Mermaid theme not applying dark mode by switching to base theme and using direct element styling
+- User wants to change Mermaid diagram background to dark gray color
+- User wants to fix Mermaid dark mode colors for true dark gray backgrounds and soft gray text/lines
+- User wants Mermaid diagram arrows/links to highlight and animate with a flow signal effect on hover
+- User wants Mermaid diagram links/arrows to always animate with flow effect and only highlight color on hover
+- User wants Mermaid diagram arrows to have continuous flow pulse animation with hover highlighting
+- User wants Mermaid diagram nodes to highlight with dark mode colors on hover
