@@ -57,7 +57,7 @@ self.onmessage = async ({ data: { type, id, data } }) => {
         switch (type) {
             case 'init':
                 currentProvider = await getProvider(data.provider, {
-                    url: data.url, // Fix: use 'url' instead of 'host'
+                    url: data.url,
                     apiKey: data.apiKey
                 });
                 postMessage({ type: 'init', id, success: true });
@@ -66,6 +66,10 @@ self.onmessage = async ({ data: { type, id, data } }) => {
                 const provider = await getProvider(data.provider, data.config);
                 const models = await provider.loadModels();
                 postMessage({ type: 'loadModels', id, data: models });
+                break;
+            case 'clearProvider':
+                providers.delete(data.providerId);
+                postMessage({ type: 'clearProvider', id, success: true });
                 break;
             case 'streamChat':
                 await streamChatInternal(data.model, data.messagesArray, id);

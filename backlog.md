@@ -285,3 +285,28 @@
 - **Changed:** Moved getProviders logic to aiproviders.js, updated core.js to use AIProvider methods
 - **Reason:** Centralize provider configuration while keeping localStorage in core.js
 - **Impact:** Better code organization, cleaner separation of concerns, eliminated code duplication
+
+## [2024-12-28] - Provider Configuration Auto-Reload
+
+- **Changed:** Added automatic model clearing and reloading when provider configuration is updated
+- **Reason:** Users expect fresh model lists when changing provider settings like API keys or URLs
+- **Impact:** Improved UX - no stale models from old configurations, immediate feedback on config changes
+
+### Technical Changes:
+
+- Added `clearProviderModels()` method to model selector
+- Added `clearProvider` worker message type to clear cached providers
+- Added event-driven communication between core and UI for config updates
+- Enhanced provider config save process to trigger model reload
+
+## [2024-12-28] - Provider Configuration Auto-Reload Fix
+
+- **Changed:** Fixed automatic model reloading after provider configuration changes
+- **Reason:** Models were clearing but not automatically reloading with new config
+- **Impact:** Seamless UX - models now automatically refresh with updated provider settings
+
+### Technical Changes:
+
+- Enhanced `saveProviderConfig()` to trigger immediate model reload for expanded providers
+- Added event listener in chat-page for `providerConfigSaved` events
+- Ensured models reload with new configuration immediately after save

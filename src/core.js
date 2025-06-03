@@ -233,10 +233,20 @@ export class ChatApp {
         const updatedProviders = AIProvider.mergeProviderConfig(currentProviders, providerId, config);
         this.save('providers', updatedProviders);
 
+        // Clear the provider from cache to force reinitialization
+        if (this.worker) {
+            await this.sendWorkerMessage('clearProvider', { providerId });
+        }
+
         if (providerId === this.getStoredProvider()) {
             this.initialized = false;
             this.initPromise = this.initWorker();
             await this.initPromise;
         }
+
+        // Notify UI to clear models for this provider
+        window.dispatchEvent(new CustomEvent('providerConfigSaved', {
+            detail: { providerId }
+        }));
     }
 }

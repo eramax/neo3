@@ -72,8 +72,30 @@ export class ModelSelector extends LitElement {
 
     saveProviderConfig() {
         this.providers[this.editingProvider] = { ...this.tempConfig };
+        this.clearProviderModels(this.editingProvider);
         this.onSaveProviderConfig?.(this.editingProvider, this.tempConfig);
+
+        // Auto-reload models if provider is expanded
+        if (this.expandedProviders.has(this.editingProvider)) {
+            this.loadingProviders.add(this.editingProvider);
+            this.onLoadModels?.(this.editingProvider);
+        }
+
         Object.assign(this, { showProviderConfig: false, editingProvider: null, tempConfig: {} });
+    }
+
+    clearProviderModels(providerId) {
+        this.models = this.models.filter(model => model.provider !== providerId);
+        this.loadingProviders.delete(providerId);
+        this.requestUpdate();
+    }
+
+    onProviderConfigSaved(providerId) {
+        this.clearProviderModels(providerId);
+        if (this.expandedProviders.has(providerId)) {
+            this.loadingProviders.add(providerId);
+            this.onLoadModels?.(providerId);
+        }
     }
 
     cancelProviderEdit() {

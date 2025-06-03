@@ -33,7 +33,6 @@ export class ChatPage extends LitElement {
 
     loadChats() { this.chats = this.app.getChats(); } connectedCallback() {
         super.connectedCallback();
-        // Only load models for the selected provider on initial load
         setTimeout(() => this.loadModels(this.selectedProvider), 100);
         const updateFromUrl = () => {
             const chatId = window.location.pathname.substring(1);
@@ -47,6 +46,10 @@ export class ChatPage extends LitElement {
                 this.selectedChat = newTitle;
                 this.currentChat = this.app.getChat(chatId);
             }
+        });
+        window.addEventListener('providerConfigSaved', (e) => {
+            const { providerId } = e.detail;
+            this.loadModels(providerId);
         });
         updateFromUrl();
     }
