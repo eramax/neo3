@@ -1,6 +1,8 @@
 import OpenAI from 'openai';
 
 export class AIProvider {
+    static providerName = 'unknown';
+
     constructor(config = {}) {
         this.config = config;
         this.client = null;
@@ -26,6 +28,8 @@ export class AIProvider {
     }
 
     formatModels(models) {
+        const providerName = this.constructor.providerName;
+        console.log(`Formatting models for ${this.constructor.name}, provider: ${providerName}`);
         return models.map(model => ({
             id: model.id,
             name: model.id,
@@ -33,7 +37,7 @@ export class AIProvider {
             size: 'Unknown',
             format: 'API',
             link: '',
-            provider: this.constructor.name.toLowerCase().replace('provider', '')
+            provider: providerName
         }));
     }
 
@@ -81,39 +85,12 @@ export class AIProvider {
 }
 
 export class OllamaProvider extends AIProvider {
-
-    // formatModels(models) {
-    //     return models.map(model => {
-    //         const baseName = model.name.split(':')[0];
-    //         let displayName = baseName;
-    //         let link = `https://ollama.com/library/${displayName}`;
-
-    //         if (baseName.startsWith('hf.co/')) {
-    //             const hfPath = baseName.substring(6);
-    //             displayName = hfPath.split('/').pop().replace(/-GGUF$/i, '');
-    //             link = `https://huggingface.co/${hfPath}`;
-    //         }
-
-    //         return {
-    //             id: model.name,
-    //             name: displayName,
-    //             arch: model.details?.family || 'Unknown',
-    //             size: this.formatSize(model.size),
-    //             format: model.details?.format?.toUpperCase() || 'Unknown',
-    //             link,
-    //             provider: 'ollama'
-    //         };
-    //     });
-    // }
-
-    // formatSize(bytes) {
-    //     if (!bytes) return 'Unknown';
-    //     const gb = bytes / (1024 ** 3);
-    //     return gb >= 1 ? `${gb.toFixed(1)}GB` : `${(bytes / (1024 ** 2)).toFixed(0)}MB`;
-    // }
+    static providerName = 'ollama';
 }
 
 export class OpenAIProvider extends AIProvider {
+    static providerName = 'openai';
+
     formatModels(models) {
         return models.filter(m => m.id.includes('gpt')).map(model => ({
             id: model.id,
@@ -139,6 +116,8 @@ export class OpenAIProvider extends AIProvider {
 }
 
 export class OpenRouterProvider extends AIProvider {
+    static providerName = 'openrouter';
+
     async initClient() {
         this.client = new OpenAI({
             apiKey: this.config.apiKey || 'dummy',
@@ -184,6 +163,8 @@ export class OpenRouterProvider extends AIProvider {
 }
 
 export class DeepSeekProvider extends AIProvider {
+    static providerName = 'deepseek';
+
     formatModels(models) {
         return models.filter(m => m.id.includes('deepseek')).map(model => ({
             id: model.id,
@@ -202,6 +183,8 @@ export class DeepSeekProvider extends AIProvider {
 }
 
 export class AnthropicProvider extends AIProvider {
+    static providerName = 'anthropic';
+
     async loadModels() {
         try {
             const response = await fetch('https://api.anthropic.com/v1/models', {
@@ -243,6 +226,8 @@ export class AnthropicProvider extends AIProvider {
 }
 
 export class GoogleProvider extends AIProvider {
+    static providerName = 'google';
+
     async loadModels() {
         try {
             const response = await fetch(`${this.config.url}/models?key=${this.config.apiKey}`);

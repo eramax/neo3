@@ -261,3 +261,15 @@
 - **Changed:** Modified sendMessage() to automatically create and navigate to new chat when no active chat exists
 - **Reason:** Improve UX by eliminating need to manually create chat before sending first message
 - **Impact:** Streamlined user workflow, reduced friction in starting conversations
+
+## [2024-12-19] - Debug Provider Name Generation
+
+- **Changed:** Added debug logging to base formatModels method, removed redundant OllamaProvider override
+- **Reason:** Generic provider name generation should work, investigating why it showed 'sa' instead of 'ollama'
+- **Impact:** Simplified code by using base class functionality, added debugging to identify root cause
+
+## [2024-12-19] - Fix Provider Names in Minified Code
+
+- **Changed:** Added static providerName property to each provider class, use it instead of constructor.name
+- **Reason:** Class names get mangled during code minification causing incorrect provider identification
+- **Impact:** Fixes provider attribute showing as 'sa' or other minified names in production builds
