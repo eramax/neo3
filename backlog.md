@@ -45,3 +45,6 @@
 - User wants to fix Mermaid diagram rendering stuck on "Loading diagram..." message
 - User wants to keep existing Mermaid styles and fix DomUtils reference error
 - Redesigned the `think` renderer to use a styled `div` instead of the `details` tag, allowing manual open/close functionality and adhering to dark mode.
+- User wants to validate Mermaid code before rendering to prevent errors from invalid diagrams
+- User wants to optimize Mermaid validation to avoid parsing code twice
+- User wants to optimize rendering performance by caching operations, reducing DOM queries, and streamlining code generation

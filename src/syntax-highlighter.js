@@ -36,35 +36,24 @@ import "prismjs/components/prism-scala"
 import { visit } from "unist-util-visit"
 
 const LANG_MAP = {
-    'html': 'markup',
-    'xml': 'markup',
-    'js': 'javascript',
-    'ts': 'typescript',
-    'py': 'python',
-    'sh': 'bash',
-    'golang': 'go'
-}
+    html: 'markup', xml: 'markup', js: 'javascript',
+    ts: 'typescript', py: 'python', sh: 'bash', golang: 'go'
+};
 
-export const remarkSyntaxHighlight = () => (tree) => {
-    visit(tree, 'code', (node) => {
-        const lang = node.lang?.toLowerCase()
+const highlightCode = (code, lang) => {
+    const actualLang = LANG_MAP[lang] || lang;
+    if (!actualLang || !Prism.languages[actualLang]) return code;
 
-        // Skip highlighting for Mermaid diagrams
-        if (lang === 'mermaid') {
-            node.highlighted = null;
-            return;
-        }
+    try {
+        return Prism.highlight(code, Prism.languages[actualLang], actualLang);
+    } catch {
+        return code;
+    }
+};
 
-        const actualLang = LANG_MAP[lang] || lang
-
-        if (actualLang && Prism.languages[actualLang]) {
-            try {
-                node.highlighted = Prism.highlight(node.value, Prism.languages[actualLang], actualLang)
-            } catch (err) {
-                node.highlighted = node.value
-            }
-        } else {
-            node.highlighted = node.value
-        }
-    })
-}
+export const remarkSyntaxHighlight = () => tree => {
+    visit(tree, 'code', node => {
+        const lang = node.lang?.toLowerCase();
+        node.highlighted = lang === 'mermaid' ? null : highlightCode(node.value, lang);
+    });
+};

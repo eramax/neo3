@@ -74,7 +74,7 @@ export class IncrementalMarkdown extends HTMLElement {
 
     set content(value) {
         if (this._internalContent === value) return;
-        this._internalContent = this._preprocessContent(value);
+        this._internalContent = value;
         this._updateRenderedContent();
     }
 
@@ -100,8 +100,7 @@ export class IncrementalMarkdown extends HTMLElement {
 
             const copyButton = event.target.closest('.copy-code-btn');
             if (copyButton) {
-                const codeContainer = copyButton.closest('.code-block-container');
-                const codeElement = codeContainer?.querySelector('pre code');
+                const codeElement = copyButton.closest('.code-block-container')?.querySelector('pre code');
                 if (codeElement && window.copyCodeToClipboard) {
                     window.copyCodeToClipboard(copyButton, codeElement.textContent);
                 }
@@ -125,7 +124,8 @@ export class IncrementalMarkdown extends HTMLElement {
     _updateRenderedContent() {
         if (!this.content) {
             this._clearContainerDOM();
-            this._resetState();
+            this.processedLength = 0;
+            this._lastProcessedAst = null;
             return;
         }
 
@@ -137,9 +137,20 @@ export class IncrementalMarkdown extends HTMLElement {
         this.processedLength = this.content.length;
     }
 
-    _resetState() {
-        this.processedLength = 0;
-        this._lastProcessedAst = null;
+    _createOrUpdateElement(newNode, oldNode, existingElement) {
+        if (existingElement && oldNode && this._canUpdateInPlace(newNode, oldNode)) {
+            this._updateElementInPlace(existingElement, newNode, oldNode);
+            return existingElement;
+        }
+
+        const html = this.htmlGenerators.createHTMLFromNode(newNode);
+        const element = this._createElementFromHTML(html);
+
+        if (element && isMermaidCode(newNode)) {
+            setTimeout(() => renderMermaidDiagram(newNode.value, element), 0);
+        }
+
+        return element;
     }
 
     _updateDOM(newAst) {
@@ -168,22 +179,6 @@ export class IncrementalMarkdown extends HTMLElement {
         }
 
         return { updatedIndices, newDomElements };
-    }
-
-    _createOrUpdateElement(newNode, oldNode, existingElement) {
-        if (existingElement && oldNode && this._canUpdateInPlace(newNode, oldNode)) {
-            this._updateElementInPlace(existingElement, newNode, oldNode);
-            return existingElement;
-        }
-
-        const html = this.htmlGenerators.createHTMLFromNode(newNode);
-        const element = this._createElementFromHTML(html);
-
-        if (element && isMermaidCode(newNode)) {
-            setTimeout(() => renderMermaidDiagram(newNode.value, element), 0);
-        }
-
-        return element;
     }
 
     _applyDOMChanges(updatedIndices, newDomElements) {
@@ -387,7 +382,7 @@ export class IncrementalMarkdown extends HTMLElement {
             return node1.value === node2.value;
         }
 
-        const equalityCheckers = {
+        const checkers = {
             text: () => node1.value === node2.value,
             inlineCode: () => node1.value === node2.value,
             html: () => node1.value === node2.value,
@@ -396,19 +391,13 @@ export class IncrementalMarkdown extends HTMLElement {
             link: () => node1.url === node2.url && this._childrenEqual(node1.children, node2.children),
             list: () => node1.ordered === node2.ordered && this._childrenEqual(node1.children, node2.children),
             inlineMath: () => node1.value === node2.value,
-            math: () => node1.value === node2.value,
-            default: () => this._childrenEqual(node1.children, node2.children)
+            math: () => node1.value === node2.value
         };
 
-        const checker = equalityCheckers[node1.type] || equalityCheckers.default;
-        return checker();
+        return checkers[node1.type]?.() ?? this._childrenEqual(node1.children, node2.children);
     }
 
-    _childrenEqual(children1, children2) {
-        if (!children1 && !children2) return true;
-        if (!children1 || !children2 || children1.length !== children2.length) return false;
-        return children1.every((child, index) => this._nodesEqual(child, children2[index]));
-    }
+    _childrenEqual = (c1, c2) => !c1 && !c2 ? true : c1?.length === c2?.length && c1?.every((child, i) => this._nodesEqual(child, c2[i]));
 }
 
 customElements.define('incremental-markdown', IncrementalMarkdown);

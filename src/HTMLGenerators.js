@@ -15,22 +15,47 @@ const COPY_ICON_SVG = `<svg width="16" height="16" fill="currentColor" viewBox="
 export class HTMLGenerators {
     constructor(customTags = new Map()) {
         this.customTags = customTags;
+        this.generators = this._createGenerators();
     }
 
-    escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/[&<>"']/g, match => HTML_ESCAPE_MAP[match]);
-    }
+    escapeHtml = text => text?.replace(/[&<>"']/g, m => HTML_ESCAPE_MAP[m]) || '';
 
     renderMath(expression, displayMode = false) {
         try {
-            return katex.renderToString(expression, {
-                displayMode,
-                throwOnError: false
-            });
-        } catch (err) {
+            return katex.renderToString(expression, { displayMode, throwOnError: false });
+        } catch {
             return `<span class="math-error">${this.escapeHtml(expression)}</span>`;
         }
+    }
+
+    _createGenerators() {
+        return {
+            paragraph: n => `<p>${this.createHTMLFromChildren(n.children)}</p>`,
+            heading: n => `<h${n.depth}>${this.createHTMLFromChildren(n.children)}</h${n.depth}>`,
+            text: n => this.escapeHtml(n.value),
+            strong: n => `<strong>${this.createHTMLFromChildren(n.children)}</strong>`,
+            emphasis: n => `<em>${this.createHTMLFromChildren(n.children)}</em>`,
+            inlineCode: n => `<code class="inline-code">${this.escapeHtml(n.value)}</code>`,
+            code: n => isMermaidCode(n) ? this.createMermaidHTML(n) : this.createCodeBlockHTML(n),
+            blockquote: n => `<blockquote>${this.createHTMLFromChildren(n.children)}</blockquote>`,
+            list: n => {
+                const tag = n.ordered ? "ol" : "ul";
+                return `<${tag}>${this.createHTMLFromChildren(n.children)}</${tag}>`;
+            },
+            listItem: n => `<li>${this.createHTMLFromChildren(n.children)}</li>`,
+            link: n => `<a href="${this.escapeHtml(n.url)}">${this.createHTMLFromChildren(n.children)}</a>`,
+            break: () => "<br>",
+            thematicBreak: () => "<hr>",
+            html: n => n.value,
+            inlineMath: n => this.renderMath(n.value, false),
+            math: n => this.renderMath(n.value, true),
+            table: n => `<table>${this.createHTMLFromChildren(n.children)}</table>`,
+            tableRow: n => `<tr>${this.createHTMLFromChildren(n.children)}</tr>`,
+            tableCell: n => {
+                const tag = n.children?.[0]?.type === "strong" ? "th" : "td";
+                return `<${tag}>${this.createHTMLFromChildren(n.children)}</${tag}>`;
+            }
+        };
     }
 
     createHTMLFromNode(node) {
@@ -40,74 +65,26 @@ export class HTMLGenerators {
             return this.createCustomTagHTML(node);
         }
 
-        const htmlGenerators = {
-            paragraph: () => `<p>${this.createHTMLFromChildren(node.children)}</p>`,
-            heading: () => `<h${node.depth}>${this.createHTMLFromChildren(node.children)}</h${node.depth}>`,
-            text: () => this.escapeHtml(node.value),
-            strong: () => `<strong>${this.createHTMLFromChildren(node.children)}</strong>`,
-            emphasis: () => `<em>${this.createHTMLFromChildren(node.children)}</em>`,
-            inlineCode: () => `<code class="inline-code">${this.escapeHtml(node.value)}</code>`,
-            code: () => isMermaidCode(node) ? this.createMermaidHTML(node) : this.createCodeBlockHTML(node),
-            blockquote: () => `<blockquote>${this.createHTMLFromChildren(node.children)}</blockquote>`,
-            list: () => {
-                const tag = node.ordered ? "ol" : "ul";
-                return `<${tag}>${this.createHTMLFromChildren(node.children)}</${tag}>`;
-            },
-            listItem: () => `<li>${this.createHTMLFromChildren(node.children)}</li>`,
-            link: () => `<a href="${this.escapeHtml(node.url)}">${this.createHTMLFromChildren(node.children)}</a>`,
-            break: () => "<br>",
-            thematicBreak: () => "<hr>",
-            html: () => node.value,
-            inlineMath: () => this.renderMath(node.value, false),
-            math: () => this.renderMath(node.value, true),
-            table: () => `<table>${this.createHTMLFromChildren(node.children)}</table>`,
-            tableRow: () => `<tr>${this.createHTMLFromChildren(node.children)}</tr>`,
-            tableCell: () => {
-                const isHeader = node.children?.[0]?.type === "strong";
-                const tag = isHeader ? "th" : "td";
-                return `<${tag}>${this.createHTMLFromChildren(node.children)}</${tag}>`;
-            },
-            default: () => node.children ? this.createHTMLFromChildren(node.children) : ''
-        };
-
-        const generator = htmlGenerators[node.type] || htmlGenerators.default;
-        return generator();
+        const generator = this.generators[node.type];
+        return generator ? generator(node) : (node.children ? this.createHTMLFromChildren(node.children) : '');
     }
 
-    createHTMLFromChildren(children) {
-        return children?.map(child => this.createHTMLFromNode(child)).join('') || '';
-    }
+    createHTMLFromChildren = children => children?.map(child => this.createHTMLFromNode(child)).join('') || '';
 
     createCodeBlockHTML(node) {
-        const language = node.lang || "plaintext"
-        const escapedLanguage = this.escapeHtml(language)
-        const codeContent = node.highlighted || this.escapeHtml(node.value)
+        const language = node.lang || "plaintext";
+        const escapedLanguage = this.escapeHtml(language);
+        const codeContent = node.highlighted || this.escapeHtml(node.value);
 
-        return `
-            <div class="code-block-container">
-                <div class="code-block-header">
-                    <span class="code-language">${escapedLanguage}</span>
-                    <button class="copy-code-btn">
-                        ${COPY_ICON_SVG}<span class="copy-text"/>
-                    </button>
-                </div>
-                <pre class="code-block"><code class="language-${escapedLanguage}">${codeContent}</code></pre>
-            </div>
-        `;
+        return `<div class="code-block-container"><div class="code-block-header"><span class="code-language">${escapedLanguage}</span><button class="copy-code-btn">${COPY_ICON_SVG}<span class="copy-text"/></button></div><pre class="code-block"><code class="language-${escapedLanguage}">${codeContent}</code></pre></div>`;
     }
 
-    createMermaidHTML(node) {
-        return `<div class="mermaid-container" data-mermaid-code="${this.escapeHtml(node.value)}">
-            <div class="mermaid-loading">Loading diagram...</div>
-        </div>`;
-    }
+    createMermaidHTML = node => `<div class="mermaid-container" data-mermaid-code="${this.escapeHtml(node.value)}"><div class="mermaid-loading">Loading diagram...</div></div>`;
 
     createCustomTagHTML(node) {
         const config = this.customTags.get(node.tagName);
         return config ? config.renderer(node.value) : `<div class="unknown-tag">${node.value}</div>`;
     }
 
-    get copyIcon() {
-        return COPY_ICON_SVG;
-    }
+    get copyIcon() { return COPY_ICON_SVG; }
 }
