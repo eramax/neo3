@@ -37,6 +37,9 @@ export class IncrementalMarkdown extends HTMLElement {
         this._setupProcessor();
         this._setupEventListeners();
         this._registerDefaultTags();
+
+        // Apply DomUtils as mixin
+        Object.assign(this, new DomUtils());
     }
 
     _setupProcessor() {
