@@ -1,5 +1,5 @@
 import { StorageFactory } from './storage-providers.js';
-import { AIProvider } from './aiproviders.js';
+import { AIProvider } from './ai-providers.js';
 
 export class GlobalState {
     constructor() {

@@ -1,5 +1,5 @@
 // Optimized core app class without workers
-import { AIProvider, ProviderFactory } from './aiproviders.js';
+import { AIProvider, ProviderFactory } from './ai-providers.js';
 import { globalState } from './global-state.js';
 
 export class ChatApp {
