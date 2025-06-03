@@ -7,7 +7,7 @@
 - Optimize for performance in all implementations
 - Always update backlog.md in root directory with any changes made
 - No shadow components
-- Always add your styles to app.scss
+- Always add your styles to src/app.scss
 - Use ES6+ features for modern JavaScript practices
 - use only dark mode colors for UI elements
 - always use bun and not npm

@@ -48,3 +48,4 @@
 - User wants to validate Mermaid code before rendering to prevent errors from invalid diagrams
 - User wants to optimize Mermaid validation to avoid parsing code twice
 - User wants to optimize rendering performance by caching operations, reducing DOM queries, and streamlining code generation
+- User wants to fix Mermaid error styling positioning and size issues

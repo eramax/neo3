@@ -43,7 +43,7 @@ export const renderMermaidDiagram = async (code, container) => {
         container.innerHTML = svg;
         container.classList.add('mermaid-rendered');
     } catch (err) {
-        container.innerHTML = `<div class="mermaid-error-container"><div class="mermaid-error"><p>Invalid Mermaid diagram: ${err.message || 'Syntax error'}</p><pre>${code}</pre></div></div>`;
+        //container.innerHTML = `<div class="mermaid-error-container"><div class="mermaid-error"><p>Invalid Mermaid diagram: ${err.message || 'Syntax error'}</p><pre>${code}</pre></div></div>`;
     }
 };
 

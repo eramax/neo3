@@ -1886,6 +1886,9 @@ body {
   background: linear-gradient(135deg, #1e1b2e 0%, #2d1b2e 100%);
   border: 1px solid #5b21b6;
   border-radius: 8px;
+  margin: 16px 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .mermaid-error {
@@ -1904,6 +1907,7 @@ body {
       content: "⚠";
       font-size: 16px;
       color: #fbbf24;
+      flex-shrink: 0;
     }
   }
 
@@ -1917,6 +1921,10 @@ body {
     overflow-x: auto;
     text-align: left;
     font-family: "JetBrains Mono", "Fira Code", monospace;
+    max-height: 200px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
   }
 }
 
