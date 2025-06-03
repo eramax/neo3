@@ -36,3 +36,5 @@
 - User wants to add syntax highlighting support for Dart, Julia, Elixir, Haskell, R, Perl, and Lua programming languages
 - User wants to add F# and Scala syntax highlighting support to the code highlighter
 - User wants to extract Prism syntax highlighting into separate module and optimize both files for better code organization
+- User wants to refactor MDRender component by extracting DOM utilities into abstract class and custom tags extension into separate files
+- User wants to fix custom element constructor error by changing DOMUtils from abstract class to composition pattern

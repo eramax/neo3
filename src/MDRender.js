@@ -3,8 +3,9 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import katex from "katex";
-import { visit } from "unist-util-visit";
 import { remarkSyntaxHighlight } from "./syntax-highlighter.js";
+import { DOMUtils } from "./DOMUtils.js";
+import { remarkCustomTags, createDefaultTags } from "./remarkCustomTags.js";
 
 // Constants
 const HTML_ESCAPE_MAP = {
@@ -23,85 +24,6 @@ const UPDATABLE_NODE_TYPES = new Set([
     'list', 'listItem', 'link', 'inlineMath', 'math'
 ]);
 
-// Remark Custom Tag Extension
-const remarkCustomTags = (options = {}) => {
-    const registeredTags = new Map(Object.entries(options.tags || {}));
-
-    return (tree) => {
-        const nodesToRemove = [];
-        let openTag = null;
-        let content = '';
-        let startIndex = -1;
-        let parentNode = null;
-
-        visit(tree, (node, index, parent) => {
-            if (node.type === 'html' && parent) {
-                for (const [tagName, config] of registeredTags) {
-                    if (node.value.includes(`<${tagName}>`)) {
-                        if (!openTag) {
-                            openTag = tagName;
-                            content = node.value.split(`<${tagName}>`)[1] || '';
-                            startIndex = index;
-                            parentNode = parent;
-
-                            if (content.includes(`</${tagName}>`)) {
-                                parent.children[index] = {
-                                    type: tagName,
-                                    tagName,
-                                    value: content.split(`</${tagName}>`)[0].trim(),
-                                    config
-                                };
-                                openTag = null;
-                                return;
-                            }
-                        }
-                    }
-
-                    if (openTag === tagName && node.value.includes(`</${tagName}>`)) {
-                        content += node.value.split(`</${tagName}>`)[0];
-
-                        parentNode.children[startIndex] = {
-                            type: tagName,
-                            tagName,
-                            value: content.trim(),
-                            config
-                        };
-
-                        for (let i = startIndex + 1; i <= index; i++) {
-                            nodesToRemove.push({ parent: parentNode, index: i });
-                        }
-
-                        openTag = null;
-                        return;
-                    }
-                }
-
-                if (openTag && index !== startIndex) {
-                    content += node.value;
-                    nodesToRemove.push({ parent, index });
-                }
-            } else if (openTag && parent) {
-                const nodeText = node.type === 'text' ? node.value : '';
-                content += nodeText;
-                nodesToRemove.push({ parent, index });
-            }
-        });
-
-        if (openTag && parentNode) {
-            parentNode.children[startIndex] = {
-                type: openTag,
-                tagName: openTag,
-                value: content.trim(),
-                config: registeredTags.get(openTag)
-            };
-        }
-
-        nodesToRemove.reverse().forEach(({ parent, index }) => {
-            parent.children.splice(index, 1);
-        });
-    };
-};
-
 export class IncrementalMarkdown extends HTMLElement {
     constructor() {
         super();
@@ -110,6 +32,7 @@ export class IncrementalMarkdown extends HTMLElement {
         this._lastProcessedAst = null;
         this.processedLength = 0;
         this.customTags = new Map();
+        this.domUtils = new DOMUtils();
         this._setupProcessor();
         this._setupEventListeners();
         this._registerDefaultTags();
@@ -125,13 +48,9 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     _registerDefaultTags() {
-        this.registerCustomTag('think', {
-            renderer: (content) => `
-                <details class="think-block">
-                    <summary>Thinking process</summary>
-                    <div class="think-content">${content}</div>
-                </details>
-            `
+        const defaultTags = createDefaultTags();
+        Object.entries(defaultTags).forEach(([tagName, config]) => {
+            this.customTags.set(tagName, config);
         });
     }
 
@@ -183,14 +102,11 @@ export class IncrementalMarkdown extends HTMLElement {
 
     // DOM management
     _clearContainerDOM() {
-        this._container.innerHTML = '';
+        this.domUtils._clearContainerDOM.call(this);
     }
 
     _createElementFromHTML(htmlString) {
-        if (!htmlString || typeof htmlString !== 'string') return null;
-        const div = document.createElement('div');
-        div.innerHTML = htmlString.trim();
-        return div.firstChild;
+        return this.domUtils._createElementFromHTML(htmlString);
     }
 
     // Main rendering logic
@@ -253,41 +169,11 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     _applyDOMChanges(updatedIndices, newDomElements) {
-        const oldDomNodes = Array.from(this._container.children);
-
-        // Replace changed elements
-        updatedIndices.forEach(index => {
-            const newElement = newDomElements[index];
-            const oldElement = oldDomNodes[index];
-
-            if (newElement && oldElement && newElement !== oldElement) {
-                this._container.replaceChild(newElement, oldElement);
-            }
-        });
-
-        // Handle length differences
-        this._adjustContainerLength(newDomElements, oldDomNodes);
+        this.domUtils._applyDOMChanges.call(this, updatedIndices, newDomElements);
     }
 
     _adjustContainerLength(newDomElements, oldDomNodes) {
-        const newCount = newDomElements.length;
-        const oldCount = oldDomNodes.length;
-
-        if (newCount > oldCount) {
-            const fragment = document.createDocumentFragment();
-            for (let i = oldCount; i < newCount; i++) {
-                if (newDomElements[i]) {
-                    fragment.appendChild(newDomElements[i]);
-                }
-            }
-            this._container.appendChild(fragment);
-        } else if (newCount < oldCount) {
-            for (let i = oldCount - 1; i >= newCount; i--) {
-                if (oldDomNodes[i]) {
-                    this._container.removeChild(oldDomNodes[i]);
-                }
-            }
-        }
+        this.domUtils._adjustContainerLength.call(this, newDomElements, oldDomNodes);
     }
 
     // Node comparison and updating
@@ -310,7 +196,7 @@ export class IncrementalMarkdown extends HTMLElement {
             html: () => this._updateHtmlNode(element, newNode),
             inlineMath: () => this._updateMathNode(element, newNode),
             math: () => this._updateMathNode(element, newNode),
-            default: () => this._updateChildrenInPlace(element, newNode.children, oldNode.children)
+            default: () => this.domUtils._updateChildrenInPlace.call(this, element, newNode.children, oldNode.children)
         };
 
         const handler = updateHandlers[newNode.type] || updateHandlers.default;
@@ -336,7 +222,7 @@ export class IncrementalMarkdown extends HTMLElement {
 
     _updateHeadingNode(element, newNode, oldNode) {
         if (newNode.depth !== oldNode.depth) return false;
-        this._updateChildrenInPlace(element, newNode.children, oldNode.children);
+        this.domUtils._updateChildrenInPlace.call(this, element, newNode.children, oldNode.children);
         return true;
     }
 
@@ -344,13 +230,13 @@ export class IncrementalMarkdown extends HTMLElement {
         if (newNode.url !== oldNode.url) {
             element.href = newNode.url;
         }
-        this._updateChildrenInPlace(element, newNode.children, oldNode.children);
+        this.domUtils._updateChildrenInPlace.call(this, element, newNode.children, oldNode.children);
         return true;
     }
 
     _updateListNode(element, newNode, oldNode) {
         if (newNode.ordered !== oldNode.ordered) return false;
-        this._updateChildrenInPlace(element, newNode.children, oldNode.children);
+        this.domUtils._updateChildrenInPlace.call(this, element, newNode.children, oldNode.children);
         return true;
     }
 
@@ -383,67 +269,6 @@ export class IncrementalMarkdown extends HTMLElement {
             element.textContent = newNode.value;
         }
         return true;
-    }
-
-    _updateChildrenInPlace(element, newChildren, oldChildren) {
-        if (!newChildren) {
-            element.innerHTML = '';
-            return;
-        }
-
-        const oldChildNodes = Array.from(element.childNodes);
-        const newChildrenCount = newChildren.length;
-
-        for (let i = 0; i < newChildrenCount; i++) {
-            this._updateOrCreateChild(element, newChildren[i], oldChildren?.[i], oldChildNodes[i], i);
-        }
-
-        // Remove excess children
-        for (let i = oldChildNodes.length - 1; i >= newChildrenCount; i--) {
-            if (oldChildNodes[i]) {
-                element.removeChild(oldChildNodes[i]);
-            }
-        }
-    }
-
-    _updateOrCreateChild(element, newChild, oldChild, existingChild, index) {
-        if (newChild.type === 'text') {
-            this._handleTextChild(element, newChild, existingChild);
-        } else {
-            this._handleElementChild(element, newChild, oldChild, existingChild);
-        }
-    }
-
-    _handleTextChild(element, newChild, existingChild) {
-        if (existingChild?.nodeType === Node.TEXT_NODE) {
-            existingChild.textContent = newChild.value;
-        } else {
-            const textNode = document.createTextNode(newChild.value);
-            if (existingChild) {
-                element.replaceChild(textNode, existingChild);
-            } else {
-                element.appendChild(textNode);
-            }
-        }
-    }
-
-    _handleElementChild(element, newChild, oldChild, existingChild) {
-        const canUpdate = existingChild?.nodeType === Node.ELEMENT_NODE &&
-            oldChild && this._canUpdateInPlace(newChild, oldChild);
-
-        if (canUpdate) {
-            this._updateElementInPlace(existingChild, newChild, oldChild);
-        } else {
-            const html = this.createHTMLFromNode(newChild);
-            const newElement = this._createElementFromHTML(html);
-            if (newElement) {
-                if (existingChild) {
-                    element.replaceChild(newElement, existingChild);
-                } else {
-                    element.appendChild(newElement);
-                }
-            }
-        }
     }
 
     // Node comparison
