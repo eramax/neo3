@@ -23,6 +23,24 @@ const UPDATABLE_NODE_TYPES = new Set([
     'list', 'listItem', 'link', 'inlineMath', 'math'
 ]);
 
+const remarkSyntaxHighlight = () => (tree) => {
+    visit(tree, 'code', (node) => {
+        const lang = node.lang;
+        if (lang && Prism.languages[lang]) {
+            try {
+                node.data = node.data || {};
+                node.data.hProperties = node.data.hProperties || {};
+                node.data.hProperties.className = [`language-${lang}`];
+                node.highlighted = Prism.highlight(node.value, Prism.languages[lang], lang);
+            } catch (err) {
+                node.highlighted = node.value;
+            }
+        } else {
+            node.highlighted = node.value;
+        }
+    });
+};
+
 // Remark Custom Tag Extension
 const remarkCustomTags = (options = {}) => {
     const registeredTags = new Map(Object.entries(options.tags || {}));
@@ -120,6 +138,7 @@ export class IncrementalMarkdown extends HTMLElement {
             .use(remarkParse)
             .use(remarkGfm)
             .use(remarkMath)
+            .use(remarkSyntaxHighlight)
             .use(remarkCustomTags, { tags: Object.fromEntries(this.customTags) });
     }
 
@@ -359,30 +378,15 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     _updateCodeBlock(element, newNode, oldNode) {
-        // Handle custom tags
-        if (newNode.lang && newNode.lang.endsWith('-custom')) {
-            const tagName = newNode.lang.replace('-custom', '');
-            const newContent = this.customTagExtension.renderCustomTag(newNode.value, tagName);
-            if (element.innerHTML !== newContent) {
-                element.innerHTML = newContent;
-            }
-            return;
-        }
-
         const codeElement = element.querySelector('pre code');
         const languageSpan = element.querySelector('.code-language');
 
         if (codeElement && newNode.value !== oldNode.value) {
-            codeElement.innerHTML = this.highlightCode(newNode.value, newNode.lang);
+            codeElement.innerHTML = newNode.highlighted || this.escapeHtml(newNode.value);
         }
 
         if (languageSpan && newNode.lang !== oldNode.lang) {
-            const language = newNode.lang || "plaintext";
-            languageSpan.textContent = language;
-
-            if (codeElement) {
-                codeElement.className = `language-${this.escapeHtml(language)}`;
-            }
+            languageSpan.textContent = newNode.lang || "plaintext";
         }
     }
 
@@ -538,18 +542,18 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     createCodeBlockHTML(node) {
-        const language = node.lang || "plaintext";
-        const highlightedCode = this.highlightCode(node.value, node.lang);
+        const language = this.escapeHtml(node.lang) || "plaintext";
+        const highlightedCode = node.highlighted || this.escapeHtml(node.value);
 
         return `
             <div class="code-block-container">
                 <div class="code-block-header">
-                    <span class="code-language">${this.escapeHtml(language)}</span>
+                    <span class="code-language">${language}</span>
                     <button class="copy-code-btn">
                         ${this.copyIcon}<span class="copy-text"/>
                     </button>
                 </div>
-                <pre class="code-block"><code class="language-${this.escapeHtml(language)}">${highlightedCode}</code></pre>
+                <pre class="code-block"><code class="language-${language}">${highlightedCode}</code></pre>
             </div>
         `;
     }
@@ -563,34 +567,6 @@ export class IncrementalMarkdown extends HTMLElement {
     escapeHtml(text) {
         if (!text) return '';
         return text.replace(/[&<>"']/g, match => HTML_ESCAPE_MAP[match]);
-    }
-
-    highlightCode(code, language) {
-        const trimmedCode = code.trim();
-
-        if (language && Prism.languages[language]) {
-            try {
-                return Prism.highlight(trimmedCode, Prism.languages[language], language);
-            } catch (err) {
-                console.warn("Prism highlighting failed:", err);
-            }
-        }
-
-        // Smart fallback - try common languages
-        const commonLangs = ['javascript', 'python', 'html', 'css', 'json'];
-        for (const lang of commonLangs) {
-            if (Prism.languages[lang]) {
-                try {
-                    const highlighted = Prism.highlight(trimmedCode, Prism.languages[lang], lang);
-                    return highlighted;
-                } catch (err) {
-                    continue;
-                }
-            }
-        }
-
-        // Return escaped plain text if no highlighting works
-        return this.escapeHtml(trimmedCode);
     }
 
     renderMath(expression, displayMode = false) {

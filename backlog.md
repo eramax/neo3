@@ -25,3 +25,4 @@
 - User wants to fix custom tag extension to capture all content until tag is closed across multiple HTML nodes
 - User wants to fix custom tag extension to prevent other nodes from rendering while custom tag is not finished
 - User wants to fix nested custom tags by updating content div directly instead of re-rendering entire element
+- User wants to fix remark-prism browser compatibility error by replacing with custom syntax highlighting plugin
