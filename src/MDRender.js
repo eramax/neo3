@@ -2,7 +2,6 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import katex from "katex";
 import { remarkSyntaxHighlight } from "./syntax-highlighter.js";
 import { DOMUtils } from "./DOMUtils.js";
 import { remarkCustomTags, createDefaultTags } from "./remarkCustomTags.js";
@@ -40,6 +39,9 @@ export class IncrementalMarkdown extends HTMLElement {
 
         // Apply DomUtils as mixin
         Object.assign(this, new DomUtils());
+
+        // Setup HTML generators
+        this.htmlGenerators = new HTMLGenerators(this.customTags);
     }
 
     _setupProcessor() {
@@ -63,6 +65,7 @@ export class IncrementalMarkdown extends HTMLElement {
             renderer: config.renderer || ((content) => `<div class="custom-tag-${tagName}">${content}</div>`)
         });
         this._setupProcessor();
+        this.htmlGenerators = new HTMLGenerators(this.customTags);
     }
 
     connectedCallback() {
@@ -82,7 +85,7 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     get copyIcon() {
-        return COPY_ICON_SVG;
+        return this.htmlGenerators.copyIcon;
     }
 
     // Content preprocessing
@@ -277,10 +280,7 @@ export class IncrementalMarkdown extends HTMLElement {
 
     _updateMathNode(element, newNode) {
         try {
-            const html = katex.renderToString(newNode.value, {
-                displayMode: newNode.type === 'math',
-                throwOnError: false
-            });
+            const html = this.htmlGenerators.renderMath(newNode.value, newNode.type === 'math');
             element.innerHTML = html;
         } catch (err) {
             element.textContent = newNode.value;
@@ -396,8 +396,7 @@ export class IncrementalMarkdown extends HTMLElement {
 
     // Utility methods
     escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/[&<>"']/g, match => HTML_ESCAPE_MAP[match]);
+        return this.htmlGenerators.escapeHtml(text);
     }
 
     renderMath(expression, displayMode = false) {
