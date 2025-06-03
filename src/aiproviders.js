@@ -85,7 +85,7 @@ export class AIProvider {
 
     static getProviders(storedProviders = {}) {
         const defaultProviders = {
-            ollama: { name: 'Ollama', url: 'http://localhost:11434', apiKey: '', requiresApiKey: false },
+            ollama: { name: 'Ollama', url: 'http://localhost:11434/v1', apiKey: '', requiresApiKey: false },
             openai: { name: 'OpenAI', url: 'https://api.openai.com/v1', apiKey: '', requiresApiKey: true },
             openrouter: { name: 'OpenRouter', url: 'https://openrouter.ai/api/v1', apiKey: '', requiresApiKey: true },
             deepseek: { name: 'DeepSeek', url: 'https://api.deepseek.com/v1', apiKey: '', requiresApiKey: true },
