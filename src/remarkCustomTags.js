@@ -77,14 +77,3 @@ export const remarkCustomTags = (options = {}) => {
         });
     };
 };
-
-export const createDefaultTags = () => ({
-    'think': {
-        renderer: (content) => `
-            <details class="think-block">
-                <summary>Thinking process</summary>
-                <div class="think-content">${content}</div>
-            </details>
-        `
-    }
-});

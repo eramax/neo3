@@ -36,18 +36,12 @@
 - User wants to add syntax highlighting support for Dart, Julia, Elixir, Haskell, R, Perl, and Lua programming languages
 - User wants to add F# and Scala syntax highlighting support to the code highlighter
 - User wants to extract Prism syntax highlighting into separate module and optimize both files for better code organization
-- User wants to refactor MDRender component by extracting DOM utilities into abstract class and custom tags extension into separate files
-- User wants to fix custom element constructor error by changing DOMUtils from abstract class to composition pattern
-- User wants to add Mermaid diagram support for code blocks with ```mermaid syntax
-- User wants to fix Mermaid diagram rendering issue where diagrams showed loading but never rendered
-- User wants to fix Mermaid diagram light colors by implementing proper dark mode theming with CSS overrides and theme variables
-- User wants to enhance Mermaid diagrams with better dark mode colors and animated effects on arrows and flows
-- User wants to remove !important declarations and fix element positioning with dimmed colors and flowing pulse animations on arrows
-- User wants to fix Mermaid diagram colors that became too bright by adjusting themeVariables to maintain dark theme
-- User wants to fix Mermaid theme not applying dark mode by switching to base theme and using direct element styling
-- User wants to change Mermaid diagram background to dark gray color
-- User wants to fix Mermaid dark mode colors for true dark gray backgrounds and soft gray text/lines
-- User wants Mermaid diagram arrows/links to highlight and animate with a flow signal effect on hover
-- User wants Mermaid diagram links/arrows to always animate with flow effect and only highlight color on hover
-- User wants Mermaid diagram arrows to have continuous flow pulse animation with hover highlighting
-- User wants Mermaid diagram nodes to highlight with dark mode colors on hover
+- User wants to separate DOM utilities into a dedicated DomUtils class and use it as a mixin in IncrementalMarkdown
+- User wants to move remarkCustomTags function to a separate file for better code organization
+- User wants to move all HTML generators and related create functions to a separate file for better code organization
+- User wants to clean up duplicated HTML generation code in MDRender after moving to HTMLGenerators
+- User wants to clean unused constants and duplicated code from MDRender after HTMLGenerators refactor
+- User wants to add support for Mermaid diagrams in markdown code blocks with lang="mermaid"
+- User wants to fix Mermaid diagram rendering stuck on "Loading diagram..." message
+- User wants to keep existing Mermaid styles and fix DomUtils reference error
+- Redesigned the `think` renderer to use a styled `div` instead of the `details` tag, allowing manual open/close functionality and adhering to dark mode.

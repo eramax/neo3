@@ -1,4 +1,7 @@
-export class DOMUtils {
+import { renderMermaidDiagram, isMermaidCode } from "./Mermaid.js";
+
+export class DomUtils {
+    // DOM management
     _clearContainerDOM() {
         this._container.innerHTML = '';
     }
@@ -8,6 +11,44 @@ export class DOMUtils {
         const div = document.createElement('div');
         div.innerHTML = htmlString.trim();
         return div.firstChild;
+    }
+
+    _updateDOM(newAst) {
+        const newChildren = newAst.children || [];
+        const oldChildren = this._lastProcessedAst?.children || [];
+
+        const { updatedIndices, newDomElements } = this._processNodeChanges(newChildren, oldChildren);
+        this._applyDOMChanges(updatedIndices, newDomElements);
+    }
+
+    _processNodeChanges(newChildren, oldChildren) {
+        const updatedIndices = [];
+        const newDomElements = [];
+
+        for (let i = 0; i < newChildren.length; i++) {
+            const newNode = newChildren[i];
+            const oldNode = oldChildren[i];
+            const existingElement = this._container.children[i];
+
+            if (!oldNode || !this._nodesEqual(newNode, oldNode)) {
+                updatedIndices.push(i);
+                newDomElements[i] = this._createOrUpdateElement(newNode, oldNode, existingElement);
+            } else {
+                newDomElements[i] = existingElement;
+            }
+        }
+
+        return { updatedIndices, newDomElements };
+    }
+
+    _createOrUpdateElement(newNode, oldNode, existingElement) {
+        if (existingElement && oldNode && this._canUpdateInPlace(newNode, oldNode)) {
+            this._updateElementInPlace(existingElement, newNode, oldNode);
+            return existingElement;
+        }
+
+        const html = this.createHTMLFromNode(newNode);
+        return this._createElementFromHTML(html);
     }
 
     _applyDOMChanges(updatedIndices, newDomElements) {
@@ -100,6 +141,9 @@ export class DOMUtils {
             const html = this.createHTMLFromNode(newChild);
             const newElement = this._createElementFromHTML(html);
             if (newElement) {
+                if (isMermaidCode(newChild)) {
+                    setTimeout(() => renderMermaidDiagram(newChild.value, newElement), 0);
+                }
                 if (existingChild) {
                     element.replaceChild(newElement, existingChild);
                 } else {

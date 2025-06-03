@@ -2,23 +2,13 @@ import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import katex from "katex";
 import { remarkSyntaxHighlight } from "./syntax-highlighter.js";
-import { DOMUtils } from "./DOMUtils.js";
-import { remarkCustomTags, createDefaultTags } from "./remarkCustomTags.js";
-import { renderMermaidDiagram, isMermaidCode } from "./mermaid-handler.js";
+import { DomUtils } from "./DomUtils.js";
+import { remarkCustomTags } from "./remarkCustomTags.js";
+import { HTMLGenerators } from "./HTMLGenerators.js";
+import { renderMermaidDiagram, isMermaidCode } from "./Mermaid.js";
 
 // Constants
-const HTML_ESCAPE_MAP = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-};
-
-const COPY_ICON_SVG = `<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1v-1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5h3zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0h-3z"/></svg>`;
-
 const UPDATABLE_NODE_TYPES = new Set([
     'text', 'inlineCode', 'html', 'code', 'paragraph',
     'heading', 'strong', 'emphasis', 'blockquote',
@@ -33,10 +23,15 @@ export class IncrementalMarkdown extends HTMLElement {
         this._lastProcessedAst = null;
         this.processedLength = 0;
         this.customTags = new Map();
-        this.domUtils = new DOMUtils();
         this._setupProcessor();
         this._setupEventListeners();
         this._registerDefaultTags();
+
+        // Apply DomUtils as mixin
+        Object.assign(this, new DomUtils());
+
+        // Setup HTML generators
+        this.htmlGenerators = new HTMLGenerators(this.customTags);
     }
 
     _setupProcessor() {
@@ -49,9 +44,13 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     _registerDefaultTags() {
-        const defaultTags = createDefaultTags();
-        Object.entries(defaultTags).forEach(([tagName, config]) => {
-            this.customTags.set(tagName, config);
+        this.registerCustomTag('think', {
+            renderer: (content) => `
+                <div class="think-block">
+                    <div class="think-header">Thinking process</div>
+                    <div class="think-content hidden">${content}</div>
+                </div>
+            `
         });
     }
 
@@ -60,6 +59,7 @@ export class IncrementalMarkdown extends HTMLElement {
             renderer: config.renderer || ((content) => `<div class="custom-tag-${tagName}">${content}</div>`)
         });
         this._setupProcessor();
+        this.htmlGenerators = new HTMLGenerators(this.customTags);
     }
 
     connectedCallback() {
@@ -79,7 +79,7 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     get copyIcon() {
-        return COPY_ICON_SVG;
+        return this.htmlGenerators.copyIcon;
     }
 
     // Content preprocessing
@@ -90,6 +90,14 @@ export class IncrementalMarkdown extends HTMLElement {
     // Event handling
     _setupEventListeners() {
         this._container.addEventListener('click', (event) => {
+            const thinkHeader = event.target.closest('.think-header');
+            if (thinkHeader) {
+                const thinkContent = thinkHeader.nextElementSibling;
+                if (thinkContent) {
+                    thinkContent.classList.toggle('hidden');
+                }
+            }
+
             const copyButton = event.target.closest('.copy-code-btn');
             if (copyButton) {
                 const codeContainer = copyButton.closest('.code-block-container');
@@ -103,11 +111,14 @@ export class IncrementalMarkdown extends HTMLElement {
 
     // DOM management
     _clearContainerDOM() {
-        this.domUtils._clearContainerDOM.call(this);
+        this._container.innerHTML = '';
     }
 
     _createElementFromHTML(htmlString) {
-        return this.domUtils._createElementFromHTML(htmlString);
+        if (!htmlString || typeof htmlString !== 'string') return null;
+        const div = document.createElement('div');
+        div.innerHTML = htmlString.trim();
+        return div.firstChild;
     }
 
     // Main rendering logic
@@ -165,10 +176,10 @@ export class IncrementalMarkdown extends HTMLElement {
             return existingElement;
         }
 
-        const html = this.createHTMLFromNode(newNode);
+        const html = this.htmlGenerators.createHTMLFromNode(newNode);
         const element = this._createElementFromHTML(html);
 
-        if (isMermaidCode(newNode)) {
+        if (element && isMermaidCode(newNode)) {
             setTimeout(() => renderMermaidDiagram(newNode.value, element), 0);
         }
 
@@ -176,11 +187,41 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     _applyDOMChanges(updatedIndices, newDomElements) {
-        this.domUtils._applyDOMChanges.call(this, updatedIndices, newDomElements);
+        const oldDomNodes = Array.from(this._container.children);
+
+        // Replace changed elements
+        updatedIndices.forEach(index => {
+            const newElement = newDomElements[index];
+            const oldElement = oldDomNodes[index];
+
+            if (newElement && oldElement && newElement !== oldElement) {
+                this._container.replaceChild(newElement, oldElement);
+            }
+        });
+
+        // Handle length differences
+        this._adjustContainerLength(newDomElements, oldDomNodes);
     }
 
     _adjustContainerLength(newDomElements, oldDomNodes) {
-        this.domUtils._adjustContainerLength.call(this, newDomElements, oldDomNodes);
+        const newCount = newDomElements.length;
+        const oldCount = oldDomNodes.length;
+
+        if (newCount > oldCount) {
+            const fragment = document.createDocumentFragment();
+            for (let i = oldCount; i < newCount; i++) {
+                if (newDomElements[i]) {
+                    fragment.appendChild(newDomElements[i]);
+                }
+            }
+            this._container.appendChild(fragment);
+        } else if (newCount < oldCount) {
+            for (let i = oldCount - 1; i >= newCount; i--) {
+                if (oldDomNodes[i]) {
+                    this._container.removeChild(oldDomNodes[i]);
+                }
+            }
+        }
     }
 
     // Node comparison and updating
@@ -203,7 +244,7 @@ export class IncrementalMarkdown extends HTMLElement {
             html: () => this._updateHtmlNode(element, newNode),
             inlineMath: () => this._updateMathNode(element, newNode),
             math: () => this._updateMathNode(element, newNode),
-            default: () => this.domUtils._updateChildrenInPlace.call(this, element, newNode.children, oldNode.children)
+            default: () => this._updateChildrenInPlace(element, newNode.children, oldNode.children)
         };
 
         const handler = updateHandlers[newNode.type] || updateHandlers.default;
@@ -229,7 +270,7 @@ export class IncrementalMarkdown extends HTMLElement {
 
     _updateHeadingNode(element, newNode, oldNode) {
         if (newNode.depth !== oldNode.depth) return false;
-        this.domUtils._updateChildrenInPlace.call(this, element, newNode.children, oldNode.children);
+        this._updateChildrenInPlace(element, newNode.children, oldNode.children);
         return true;
     }
 
@@ -237,13 +278,13 @@ export class IncrementalMarkdown extends HTMLElement {
         if (newNode.url !== oldNode.url) {
             element.href = newNode.url;
         }
-        this.domUtils._updateChildrenInPlace.call(this, element, newNode.children, oldNode.children);
+        this._updateChildrenInPlace(element, newNode.children, oldNode.children);
         return true;
     }
 
     _updateListNode(element, newNode, oldNode) {
         if (newNode.ordered !== oldNode.ordered) return false;
-        this.domUtils._updateChildrenInPlace.call(this, element, newNode.children, oldNode.children);
+        this._updateChildrenInPlace(element, newNode.children, oldNode.children);
         return true;
     }
 
@@ -254,7 +295,7 @@ export class IncrementalMarkdown extends HTMLElement {
 
     _updateCodeBlock(element, newNode, oldNode) {
         if (isMermaidCode(newNode)) {
-            if (newNode.value !== oldNode?.value) {
+            if (newNode.value !== oldNode.value) {
                 renderMermaidDiagram(newNode.value, element);
             }
             return;
@@ -264,7 +305,7 @@ export class IncrementalMarkdown extends HTMLElement {
         const languageSpan = element.querySelector('.code-language');
 
         if (codeElement && newNode.value !== oldNode.value) {
-            codeElement.innerHTML = newNode.highlighted || this.escapeHtml(newNode.value);
+            codeElement.innerHTML = newNode.highlighted || this.htmlGenerators.escapeHtml(newNode.value);
         }
 
         if (languageSpan && newNode.lang !== oldNode.lang) {
@@ -273,16 +314,69 @@ export class IncrementalMarkdown extends HTMLElement {
     }
 
     _updateMathNode(element, newNode) {
-        try {
-            const html = katex.renderToString(newNode.value, {
-                displayMode: newNode.type === 'math',
-                throwOnError: false
-            });
-            element.innerHTML = html;
-        } catch (err) {
-            element.textContent = newNode.value;
-        }
+        const html = this.htmlGenerators.renderMath(newNode.value, newNode.type === 'math');
+        element.innerHTML = html;
         return true;
+    }
+
+    _updateChildrenInPlace(element, newChildren, oldChildren) {
+        if (!newChildren) {
+            element.innerHTML = '';
+            return;
+        }
+
+        const oldChildNodes = Array.from(element.childNodes);
+        const newChildrenCount = newChildren.length;
+
+        for (let i = 0; i < newChildrenCount; i++) {
+            this._updateOrCreateChild(element, newChildren[i], oldChildren?.[i], oldChildNodes[i], i);
+        }
+
+        // Remove excess children
+        for (let i = oldChildNodes.length - 1; i >= newChildrenCount; i--) {
+            if (oldChildNodes[i]) {
+                element.removeChild(oldChildNodes[i]);
+            }
+        }
+    }
+
+    _updateOrCreateChild(element, newChild, oldChild, existingChild, index) {
+        if (newChild.type === 'text') {
+            this._handleTextChild(element, newChild, existingChild);
+        } else {
+            this._handleElementChild(element, newChild, oldChild, existingChild);
+        }
+    }
+
+    _handleTextChild(element, newChild, existingChild) {
+        if (existingChild?.nodeType === Node.TEXT_NODE) {
+            existingChild.textContent = newChild.value;
+        } else {
+            const textNode = document.createTextNode(newChild.value);
+            if (existingChild) {
+                element.replaceChild(textNode, existingChild);
+            } else {
+                element.appendChild(textNode);
+            }
+        }
+    }
+
+    _handleElementChild(element, newChild, oldChild, existingChild) {
+        const canUpdate = existingChild?.nodeType === Node.ELEMENT_NODE &&
+            oldChild && this._canUpdateInPlace(newChild, oldChild);
+
+        if (canUpdate) {
+            this._updateElementInPlace(existingChild, newChild, oldChild);
+        } else {
+            const html = this.htmlGenerators.createHTMLFromNode(newChild);
+            const newElement = this._createElementFromHTML(html);
+            if (newElement) {
+                if (isMermaidCode(newChild)) {
+                    setTimeout(() => renderMermaidDiagram(newChild.value, newElement), 0);
+                }
+                existingChild ? element.replaceChild(newElement, existingChild) : element.appendChild(newElement);
+            }
+        }
     }
 
     // Node comparison
@@ -314,98 +408,6 @@ export class IncrementalMarkdown extends HTMLElement {
         if (!children1 && !children2) return true;
         if (!children1 || !children2 || children1.length !== children2.length) return false;
         return children1.every((child, index) => this._nodesEqual(child, children2[index]));
-    }
-
-    // HTML generation
-    createHTMLFromNode(node) {
-        if (!node) return '';
-
-        if (this.customTags.has(node.type)) {
-            return this.createCustomTagHTML(node);
-        }
-
-        const htmlGenerators = {
-            paragraph: () => `<p>${this.createHTMLFromChildren(node.children)}</p>`,
-            heading: () => `<h${node.depth}>${this.createHTMLFromChildren(node.children)}</h${node.depth}>`,
-            text: () => this.escapeHtml(node.value),
-            strong: () => `<strong>${this.createHTMLFromChildren(node.children)}</strong>`,
-            emphasis: () => `<em>${this.createHTMLFromChildren(node.children)}</em>`,
-            inlineCode: () => `<code class="inline-code">${this.escapeHtml(node.value)}</code>`,
-            code: () => this.createCodeBlockHTML(node),
-            blockquote: () => `<blockquote>${this.createHTMLFromChildren(node.children)}</blockquote>`,
-            list: () => {
-                const tag = node.ordered ? "ol" : "ul";
-                return `<${tag}>${this.createHTMLFromChildren(node.children)}</${tag}>`;
-            },
-            listItem: () => `<li>${this.createHTMLFromChildren(node.children)}</li>`,
-            link: () => `<a href="${this.escapeHtml(node.url)}">${this.createHTMLFromChildren(node.children)}</a>`,
-            break: () => "<br>",
-            thematicBreak: () => "<hr>",
-            html: () => node.value,
-            inlineMath: () => this.renderMath(node.value, false),
-            math: () => this.renderMath(node.value, true),
-            table: () => `<table>${this.createHTMLFromChildren(node.children)}</table>`,
-            tableRow: () => `<tr>${this.createHTMLFromChildren(node.children)}</tr>`,
-            tableCell: () => {
-                const isHeader = node.children?.[0]?.type === "strong";
-                const tag = isHeader ? "th" : "td";
-                return `<${tag}>${this.createHTMLFromChildren(node.children)}</${tag}>`;
-            },
-            default: () => node.children ? this.createHTMLFromChildren(node.children) : ''
-        };
-
-        const generator = htmlGenerators[node.type] || htmlGenerators.default;
-        return generator();
-    }
-
-    createHTMLFromChildren(children) {
-        return children?.map(child => this.createHTMLFromNode(child)).join('') || '';
-    }
-
-    createCodeBlockHTML(node) {
-        if (isMermaidCode(node)) {
-            return `<div class="mermaid-container">
-                <div class="mermaid-loading">Loading diagram...</div>
-            </div>`;
-        }
-
-        const language = node.lang || "plaintext"
-        const escapedLanguage = this.escapeHtml(language)
-        const codeContent = node.highlighted || this.escapeHtml(node.value)
-
-        return `
-            <div class="code-block-container">
-                <div class="code-block-header">
-                    <span class="code-language">${escapedLanguage}</span>
-                    <button class="copy-code-btn">
-                        ${this.copyIcon}<span class="copy-text"/>
-                    </button>
-                </div>
-                <pre class="code-block"><code class="language-${escapedLanguage}">${codeContent}</code></pre>
-            </div>
-        `;
-    }
-
-    createCustomTagHTML(node) {
-        const config = this.customTags.get(node.tagName);
-        return config ? config.renderer(node.value) : `<div class="unknown-tag">${node.value}</div>`;
-    }
-
-    // Utility methods
-    escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/[&<>"']/g, match => HTML_ESCAPE_MAP[match]);
-    }
-
-    renderMath(expression, displayMode = false) {
-        try {
-            return katex.renderToString(expression, {
-                displayMode,
-                throwOnError: false
-            });
-        } catch (err) {
-            return `<span class="math-error">${this.escapeHtml(expression)}</span>`;
-        }
     }
 }
 
