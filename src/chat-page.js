@@ -2,7 +2,7 @@ import { LitElement, html } from 'lit';
 import { ChatApp } from "./core.js";
 import { globalState } from './global-state.js';
 import { Utils } from './utils.js';
-import "./MDRender.js";
+import "./MarkdownBlock.js";
 import "./sidebar.js";
 import "./model-selector.js";
 import "./toast.js";
@@ -326,9 +326,8 @@ export class ChatPage extends LitElement {
                                         <div class="message-header">
                                             <span class="sender">${msg.role === "ai" ? msg.metadata?.model || "AI" : "User"}</span>
                                             <span class="time">${msg.time}</span>
-                                        </div>
-                                        <div class="content">
-                                            <incremental-markdown .content=${msg.content}></incremental-markdown>
+                                        </div>                                        <div class="content">
+                                            <markdown-block .content=${msg.content}></markdown-block>
                                         </div>
                                     </div>
                                 </div>
@@ -340,10 +339,9 @@ export class ChatPage extends LitElement {
                                         <div class="message-header">
                                             <span class="sender">${this.selectedModel}</span>
                                             <span class="time">${Utils.formatTime()}</span>
-                                        </div>
-                                        ${this.streamingMessage ? html`
+                                        </div>                                        ${this.streamingMessage ? html`
                                             <div class="content">
-                                                <incremental-markdown .content=${this.streamingMessage}></incremental-markdown>
+                                                <markdown-block .content=${this.streamingMessage}></markdown-block>
                                             </div>` : html`
                                             <div class="loading-dots">
                                                 <span class="dot"></span><span class="dot"></span><span class="dot"></span>

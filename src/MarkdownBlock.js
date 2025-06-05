@@ -14,7 +14,7 @@ const UPDATABLE_NODE_TYPES = new Set([
     'list', 'listItem', 'link', 'inlineMath', 'math'
 ]);
 
-export class IncrementalMarkdown extends HTMLElement {
+export class MarkdownBlock extends HTMLElement {
     constructor() {
         super();
         this._internalContent = '';
@@ -85,7 +85,7 @@ export class IncrementalMarkdown extends HTMLElement {
     _preprocessContent(value) {
         return value;
     }    // Event handling
-    
+
     _setupEventListeners() {
         this._container.addEventListener('click', (event) => {
             const thinkHeader = event.target.closest('.think-header');
@@ -396,9 +396,7 @@ export class IncrementalMarkdown extends HTMLElement {
         };
 
         return checkers[node1.type]?.() ?? this._childrenEqual(node1.children, node2.children);
-    }
-
-    _childrenEqual = (c1, c2) => !c1 && !c2 ? true : c1?.length === c2?.length && c1?.every((child, i) => this._nodesEqual(child, c2[i]));
+    } _childrenEqual = (c1, c2) => !c1 && !c2 ? true : c1?.length === c2?.length && c1?.every((child, i) => this._nodesEqual(child, c2[i]));
 }
 
-customElements.define('incremental-markdown', IncrementalMarkdown);
+customElements.define('markdown-block', MarkdownBlock);

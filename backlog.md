@@ -36,7 +36,7 @@
 - User wants to add syntax highlighting support for Dart, Julia, Elixir, Haskell, R, Perl, and Lua programming languages
 - User wants to add F# and Scala syntax highlighting support to the code highlighter
 - User wants to extract Prism syntax highlighting into separate module and optimize both files for better code organization
-- User wants to separate DOM utilities into a dedicated DomUtils class and use it as a mixin in IncrementalMarkdown
+- User wants to separate DOM utilities into a dedicated DomUtils class and use it as a mixin in MarkdownBlock
 - User wants to move remarkCustomTags function to a separate file for better code organization
 - User wants to move all HTML generators and related create functions to a separate file for better code organization
 - User wants to clean up duplicated HTML generation code in MDRender after moving to HTMLGenerators
@@ -66,3 +66,4 @@
 - User wants to adjust HTML preview iframe width to 80% of screen width
 - User wants to make the preview toggleable
 - User wants to style the toggle with visual feedback for active/inactive states
+- User wants to rename incremental-markdown to markdown-block
