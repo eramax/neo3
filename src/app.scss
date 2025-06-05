@@ -1689,7 +1689,6 @@ body {
     gap: 4px;
     align-items: center;
   }
-
   .content .expand-collapse-btn,
   .content .action-btn {
     background: #21262d;
@@ -1708,6 +1707,17 @@ body {
     &:hover {
       background: #30363d;
       border-color: #484f58;
+    }
+
+    &.active {
+      background: #238636;
+      border-color: #2ea043;
+      color: #fff;
+      
+      &:hover {
+        background: #2ea043;
+        border-color: #3fb950;
+      }
     }
 
     svg {

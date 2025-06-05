@@ -107,9 +107,7 @@ export class CodeBlockManager {
             "'": '&#39;'
         };
         return text?.replace(/[&<>"']/g, m => map[m]) || '';
-    }
-
-    static async handleCodeBlockAction(container, actionName, language) {
+    }    static async handleCodeBlockAction(container, actionName, language) {
         const actions = LANGUAGE_ACTIONS[language.toLowerCase()];
         const action = actions?.find(a => a.name.toLowerCase() === actionName);
 
@@ -120,31 +118,51 @@ export class CodeBlockManager {
         const previewSection = container.querySelector('.preview-section');
         const previewContent = container.querySelector('.preview-content');
         const codeContent = container.querySelector('.code-content');
+        const actionBtn = container.querySelector(`[data-action="${actionName}"]`);
 
         if (!code || !previewSection || !previewContent) return;
 
-        // Show preview section and collapse code
-        previewSection.classList.remove('hidden');
-        codeContent.classList.add('collapsed');
+        // Check if preview is currently visible - toggle it
+        const isPreviewVisible = !previewSection.classList.contains('hidden');
+        
+        if (isPreviewVisible) {
+            // Hide preview
+            previewSection.classList.add('hidden');
+            actionBtn?.classList.remove('active');
+            
+            // Expand code if it was collapsed
+            if (codeContent.classList.contains('collapsed')) {
+                codeContent.classList.remove('collapsed');
+                const expandBtn = container.querySelector('.expand-collapse-btn');
+                if (expandBtn) {
+                    expandBtn.innerHTML = `${COLLAPSE_ICON_SVG}<span class="expand-text">Collapse</span>`;
+                    expandBtn.dataset.expanded = 'true';
+                }
+            }
+        } else {
+            // Show preview section and collapse code
+            previewSection.classList.remove('hidden');
+            actionBtn?.classList.add('active');
+            codeContent.classList.add('collapsed');
 
-        // Update expand/collapse button
-        const expandBtn = container.querySelector('.expand-collapse-btn');
-        if (expandBtn) {
-            expandBtn.innerHTML = `${EXPAND_ICON_SVG}<span class="expand-text">Expand</span>`;
-            expandBtn.dataset.expanded = 'false';
+            // Update expand/collapse button
+            const expandBtn = container.querySelector('.expand-collapse-btn');
+            if (expandBtn) {
+                expandBtn.innerHTML = `${EXPAND_ICON_SVG}<span class="expand-text">Expand</span>`;
+                expandBtn.dataset.expanded = 'false';
+            }
+
+            try {
+                previewContent.innerHTML = '<div class="loading">Rendering preview...</div>';
+                await action.execute(code, container, previewContent);
+            } catch (err) {
+                previewContent.innerHTML = `<div class="error">Failed to render preview: ${err.message}</div>`;
+            }
         }
-
-        try {
-            previewContent.innerHTML = '<div class="loading">Rendering preview...</div>';
-            await action.execute(code, container, previewContent);
-        } catch (err) {
-            previewContent.innerHTML = `<div class="error">Failed to render preview: ${err.message}</div>`;
-        }
-    }
-
-    static toggleCodeBlock(container) {
+    }    static toggleCodeBlock(container) {
         const expandBtn = container.querySelector('.expand-collapse-btn');
         const codeContent = container.querySelector('.code-content');
+        const previewSection = container.querySelector('.preview-section');
         const isExpanded = expandBtn.dataset.expanded === 'true';
 
         if (isExpanded) {
@@ -155,6 +173,13 @@ export class CodeBlockManager {
             codeContent.classList.remove('collapsed');
             expandBtn.innerHTML = `${COLLAPSE_ICON_SVG}<span class="expand-text">Collapse</span>`;
             expandBtn.dataset.expanded = 'true';
+            
+            // If preview is open when expanding code, hide preview and remove active state
+            if (previewSection && !previewSection.classList.contains('hidden')) {
+                previewSection.classList.add('hidden');
+                const actionBtn = container.querySelector('.action-btn.active');
+                actionBtn?.classList.remove('active');
+            }
         }
     }
 

@@ -64,3 +64,5 @@
   - Use lazy loading for language-specific dependencies (only load when action executed)
   - Add HTML preview action for HTML code blocks with sandboxed iframe rendering
 - User wants to adjust HTML preview iframe width to 80% of screen width
+- User wants to make the preview toggleable
+- User wants to style the toggle with visual feedback for active/inactive states
