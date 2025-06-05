@@ -1,5 +1,4 @@
 import katex from "katex";
-import { isMermaidCode } from "./Mermaid.js";
 
 // Constants
 const HTML_ESCAPE_MAP = {
@@ -36,7 +35,7 @@ export class HTMLGenerators {
             strong: n => `<strong>${this.createHTMLFromChildren(n.children)}</strong>`,
             emphasis: n => `<em>${this.createHTMLFromChildren(n.children)}</em>`,
             inlineCode: n => `<code class="inline-code">${this.escapeHtml(n.value)}</code>`,
-            code: n => isMermaidCode(n) ? this.createMermaidHTML(n) : this.createCodeBlockHTML(n),
+            code: n => (n?.type === 'code' && n?.lang?.toLowerCase() === 'mermaid') ? this.createMermaidHTML(n) : this.createCodeBlockHTML(n),
             blockquote: n => `<blockquote>${this.createHTMLFromChildren(n.children)}</blockquote>`,
             list: n => {
                 const tag = n.ordered ? "ol" : "ul";

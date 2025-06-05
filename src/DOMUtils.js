@@ -1,5 +1,3 @@
-import { renderMermaidDiagram, isMermaidCode } from "./Mermaid.js";
-
 export class DomUtils {
     // DOM management
     _clearContainerDOM() {

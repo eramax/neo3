@@ -6,7 +6,6 @@ import { remarkSyntaxHighlight } from "./syntax-highlighter.js";
 import { DomUtils } from "./DomUtils.js";
 import { remarkCustomTags } from "./remarkCustomTags.js";
 import { HTMLGenerators } from "./HTMLGenerators.js";
-import { renderMermaidDiagram, isMermaidCode } from "./Mermaid.js";
 
 // Constants
 const UPDATABLE_NODE_TYPES = new Set([
@@ -102,7 +101,7 @@ export class IncrementalMarkdown extends HTMLElement {
                 if (codeElement && window.copyCodeToClipboard) {
                     window.copyCodeToClipboard(copyButton, codeElement.textContent);
                 }
-            } const previewButton = event.target.closest('.preview-btn');
+            }            const previewButton = event.target.closest('.preview-btn');
             if (previewButton) {
                 const container = previewButton.closest('.code-block-container');
                 const codeElement = container?.querySelector('pre code');
@@ -120,7 +119,12 @@ export class IncrementalMarkdown extends HTMLElement {
                     previewDiv.innerHTML = '<div class="mermaid-loading">Rendering diagram...</div>';
                     container.appendChild(previewDiv);
 
-                    renderMermaidDiagram(mermaidCode, previewDiv);
+                    // Dynamically import and render mermaid only when needed
+                    import('./Mermaid.js').then(({ renderMermaidDiagram }) => {
+                        renderMermaidDiagram(mermaidCode, previewDiv);
+                    }).catch(err => {
+                        previewDiv.innerHTML = `<div class="mermaid-error-container"><div class="mermaid-error"><p>Failed to load Mermaid: ${err.message}</p></div></div>`;
+                    });
                 }
             }
         });

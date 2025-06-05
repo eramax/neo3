@@ -11,10 +11,10 @@ export default defineConfig({
         emptyOutDir: true,
         chunkSizeWarningLimit: 1000,
         rollupOptions: {
-            input: 'index.html',
-            output: {
+            input: 'index.html', output: {
                 manualChunks: {
                     'vendor': ['lit', 'lit-element'],
+                    'mermaid': ['mermaid']
                 }
             }
         }
@@ -26,8 +26,7 @@ export default defineConfig({
         alias: {
             '@': './src'
         }
-    },
-    optimizeDeps: {
-        include: ['lit']
+    }, optimizeDeps: {
+        include: ['lit', 'mermaid']
     }
 });

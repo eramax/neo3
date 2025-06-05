@@ -3,7 +3,7 @@ let mermaidInstance = null;
 const loadMermaid = async () => {
     if (mermaidInstance) return mermaidInstance;
 
-    const { default: mermaid } = await import('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs');
+    const { default: mermaid } = await import('mermaid');
 
     mermaid.initialize({
         theme: 'dark',
@@ -45,5 +45,3 @@ export const renderMermaidDiagram = async (code, previewDiv) => {
         previewDiv.innerHTML = `<div class="mermaid-error-container"><div class="mermaid-error"><p>Invalid Mermaid diagram: ${err.message || 'Syntax error'}</p></div></div>`;
     }
 };
-
-export const isMermaidCode = node => node?.type === 'code' && node?.lang?.toLowerCase() === 'mermaid';
