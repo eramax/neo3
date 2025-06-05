@@ -1,4 +1,5 @@
 import katex from "katex";
+import { CodeBlockManager } from "./CodeBlock.js";
 
 // Constants
 const HTML_ESCAPE_MAP = {
@@ -35,7 +36,7 @@ export class HTMLGenerators {
             strong: n => `<strong>${this.createHTMLFromChildren(n.children)}</strong>`,
             emphasis: n => `<em>${this.createHTMLFromChildren(n.children)}</em>`,
             inlineCode: n => `<code class="inline-code">${this.escapeHtml(n.value)}</code>`,
-            code: n => (n?.type === 'code' && n?.lang?.toLowerCase() === 'mermaid') ? this.createMermaidHTML(n) : this.createCodeBlockHTML(n),
+            code: n => CodeBlockManager.createCodeBlockHTML(n),
             blockquote: n => `<blockquote>${this.createHTMLFromChildren(n.children)}</blockquote>`,
             list: n => {
                 const tag = n.ordered ? "ol" : "ul";
@@ -66,20 +67,7 @@ export class HTMLGenerators {
 
         const generator = this.generators[node.type];
         return generator ? generator(node) : (node.children ? this.createHTMLFromChildren(node.children) : '');
-    }
-
-    createHTMLFromChildren = children => children?.map(child => this.createHTMLFromNode(child)).join('') || ''; createCodeBlockHTML(node) {
-        const language = node.lang || "plaintext";
-        const escapedLanguage = this.escapeHtml(language);
-        const codeContent = node.highlighted || this.escapeHtml(node.value);
-
-        const isMermaid = language.toLowerCase() === 'mermaid';
-        const previewButton = isMermaid ? `<button class="preview-btn">${COPY_ICON_SVG}<span class="preview-text">Preview</span></button>` : '';
-
-        return `<div class="code-block-container"><div class="code-block-header"><span class="code-language">${escapedLanguage}</span>${previewButton}<button class="copy-code-btn">${COPY_ICON_SVG}<span class="copy-text"/></button></div><pre class="code-block"><code class="language-${escapedLanguage}">${codeContent}</code></pre></div>`;
-    }
-
-    createMermaidHTML = node => this.createCodeBlockHTML(node);
+    } createHTMLFromChildren = children => children?.map(child => this.createHTMLFromNode(child)).join('') || '';
 
     createCustomTagHTML(node) {
         const config = this.customTags.get(node.tagName);

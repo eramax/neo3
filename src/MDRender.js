@@ -101,30 +101,24 @@ export class IncrementalMarkdown extends HTMLElement {
                 if (codeElement && window.copyCodeToClipboard) {
                     window.copyCodeToClipboard(copyButton, codeElement.textContent);
                 }
-            } const previewButton = event.target.closest('.preview-btn');
-            if (previewButton) {
-                const container = previewButton.closest('.code-block-container');
-                const codeElement = container?.querySelector('pre code');
-                const mermaidCode = codeElement?.textContent;
+            }
 
-                if (mermaidCode) {
-                    let previewDiv = container.querySelector('.mermaid-preview-popup');
-                    if (previewDiv) {
-                        previewDiv.remove();
-                        return;
-                    }
+            const expandCollapseBtn = event.target.closest('.expand-collapse-btn');
+            if (expandCollapseBtn) {
+                const container = expandCollapseBtn.closest('.code-block-container');
+                if (container && window.CodeBlockManager) {
+                    window.CodeBlockManager.toggleCodeBlock(container);
+                }
+            }
 
-                    previewDiv = document.createElement('div');
-                    previewDiv.className = 'mermaid-preview-popup';
-                    previewDiv.innerHTML = '<div class="mermaid-loading">Rendering diagram...</div>';
-                    container.appendChild(previewDiv);
+            const actionBtn = event.target.closest('.action-btn');
+            if (actionBtn) {
+                const container = actionBtn.closest('.code-block-container');
+                const actionName = actionBtn.dataset.action;
+                const language = actionBtn.dataset.lang;
 
-                    // Dynamically import and render mermaid only when needed
-                    import('./Mermaid.js').then(({ renderMermaidDiagram }) => {
-                        renderMermaidDiagram(mermaidCode, previewDiv);
-                    }).catch(err => {
-                        previewDiv.innerHTML = `<div class="mermaid-error-container"><div class="mermaid-error"><p>Failed to load Mermaid: ${err.message}</p></div></div>`;
-                    });
+                if (container && actionName && language && window.CodeBlockManager) {
+                    window.CodeBlockManager.handleCodeBlockAction(container, actionName, language);
                 }
             }
         });

@@ -55,3 +55,12 @@
 - User wants to show Mermaid code by default instead of preview when first rendered
 - User wants to only parse and render Mermaid diagrams when the user clicks the Preview button, not automatically
 - User wants to simplify Mermaid implementation to just add a Preview button beside Copy button for Mermaid code blocks
+- User wants to enhance code block functionality with multiple improvements:
+  - Make preview button positioned next to copy button (on the right)
+  - Add expand/collapse button (first on the right) to show/hide code content
+  - When preview is opened, automatically collapse the code section
+  - Add a header for the preview section as a sub-container
+  - Convert code block to generic function/class supporting multiple languages with configurable actions
+  - Use lazy loading for language-specific dependencies (only load when action executed)
+  - Add HTML preview action for HTML code blocks with sandboxed iframe rendering
+- User wants to adjust HTML preview iframe width to 80% of screen width

@@ -1,4 +1,5 @@
 import './chat-page.js';
+import './CodeBlock.js';
 
 // Global error handler and copy functionality
 window.addEventListener('error', e => console.error('App error:', e.error));
