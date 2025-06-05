@@ -1,5 +1,5 @@
 // Optimized core app class without workers
-import { AIProvider, ProviderFactory } from './ai-providers.js';
+import { ProviderFactory } from './ai-providers.js';
 import { globalState } from './global-state.js';
 
 export class ChatApp {
@@ -11,7 +11,9 @@ export class ChatApp {
         this.initialized = false;
         this.abortControllers = new Map();
         this.initPromise = this.initProvider();
-    } async getProvider(providerId, config) {
+    } 
+    
+    async getProvider(providerId, config) {
         if (!this.aiProviders.has(providerId)) {
             const ProviderClass = ProviderFactory[providerId];
             if (!ProviderClass) throw new Error(`Unknown provider: ${providerId}`);
@@ -46,7 +48,9 @@ export class ChatApp {
         if (!this.initialized) {
             await this.initPromise;
         }
-    } save(key, data) {
+    } 
+    
+    save(key, data) {
         globalState.save(key, data);
     }
 
@@ -96,14 +100,18 @@ export class ChatApp {
         this.saveState();
         if (isFirst && model && message.content) this.generateTitleAsync(chatId, message.content, model);
         return [...this.messages[chatId]];
-    } async generateTitleAsync(chatId, userMessage, model) {
+    } 
+    
+    async generateTitleAsync(chatId, userMessage, model) {
         try {
             const title = await this.currentProvider.generateTitle(userMessage, model);
             this.updateChatTitle(chatId, title);
         } catch (e) {
             console.warn('Title generation failed:', e);
         }
-    } async streamResponse(model, messages, onChunk, onComplete, onError, chatId = null) {
+    } 
+    
+    async streamResponse(model, messages, onChunk, onComplete, onError, chatId = null) {
         await this.ensureInitialized();
 
         const abortController = new AbortController();

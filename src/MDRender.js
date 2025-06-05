@@ -85,6 +85,7 @@ export class IncrementalMarkdown extends HTMLElement {
     _preprocessContent(value) {
         return value;
     }    // Event handling
+    
     _setupEventListeners() {
         this._container.addEventListener('click', (event) => {
             const thinkHeader = event.target.closest('.think-header');

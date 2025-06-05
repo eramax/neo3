@@ -107,7 +107,9 @@ export class CodeBlockManager {
             "'": '&#39;'
         };
         return text?.replace(/[&<>"']/g, m => map[m]) || '';
-    }    static async handleCodeBlockAction(container, actionName, language) {
+    }    
+    
+    static async handleCodeBlockAction(container, actionName, language) {
         const actions = LANGUAGE_ACTIONS[language.toLowerCase()];
         const action = actions?.find(a => a.name.toLowerCase() === actionName);
 
@@ -159,7 +161,9 @@ export class CodeBlockManager {
                 previewContent.innerHTML = `<div class="error">Failed to render preview: ${err.message}</div>`;
             }
         }
-    }    static toggleCodeBlock(container) {
+    }    
+    
+    static toggleCodeBlock(container) {
         const expandBtn = container.querySelector('.expand-collapse-btn');
         const codeContent = container.querySelector('.code-content');
         const previewSection = container.querySelector('.preview-section');
