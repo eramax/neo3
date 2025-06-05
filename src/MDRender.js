@@ -101,7 +101,7 @@ export class IncrementalMarkdown extends HTMLElement {
                 if (codeElement && window.copyCodeToClipboard) {
                     window.copyCodeToClipboard(copyButton, codeElement.textContent);
                 }
-            }            const previewButton = event.target.closest('.preview-btn');
+            } const previewButton = event.target.closest('.preview-btn');
             if (previewButton) {
                 const container = previewButton.closest('.code-block-container');
                 const codeElement = container?.querySelector('pre code');
