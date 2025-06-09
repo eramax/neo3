@@ -3,7 +3,7 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { remarkSyntaxHighlight } from "./syntax-highlighter.js";
-import { DomUtils } from "./DomUtils.js";
+import { DomUtils } from "./DOMUtils.js";
 import { remarkCustomTags } from "./remarkCustomTags.js";
 import { HTMLGenerators } from "./HTMLGenerators.js";
 
